@@ -3,11 +3,11 @@
 ##### Analysis correlation between weather conditions and diagnoses
 
 ### Sisukord
-[Andmeallikad](#andmeallikad)
-[Arhitektuur](#arhitektuur)
-[Andmekvaliteet](#andmekvaliteet)
-[KPI-d](#kpi-d)
-[Juhised käivitamised](#juhised-käivitamiseks)
+1. [Andmeallikad](#andmeallikad)
+2. [Arhitektuur](#arhitektuur)
+3. [Andmekvaliteet](#andmekvaliteet)
+4. [Analüütika](#kpi-d)
+5. [Juhised käivitamiseks](#juhised-käivitamiseks)
 
 Projekti eesmärk on uurida, kuidas jaotuvad diagnoosid piirkonniti ning kas vihmastel ilmastikutingimustel võib olla seos kroonilise valu või liigesevalu diagnooside sagedasema esinemisega. Selleks analüüsitakse, millised diagnoosid on erinevates piirkondades kõige levinumad, kui palju esineb kroonilise valu või liigesevalu diagnoosiga patsiente ning kas vihmastel päevadel on nende patsientide arv piirkonniti suurem. Lisaks võrreldakse piirkondade lõikes vihmaste päevade osakaalu, et hinnata, kas ilmastikutingimuste ja vaadeldavate diagnooside vahel võib esineda seos.
 
