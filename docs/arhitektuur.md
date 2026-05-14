@@ -60,17 +60,19 @@ flowchart LR
     E3[raw_encounters]
     E4[raw_icd10]
     E5[raw_weather]
+    E6[raw_countries, regions]
 
     D --> E1
     D --> E2
     D --> E3
     D --> E4
     D --> E5
+    D --> E6
 
     %% =========================
     %% PUHASTUSKIHT / HÕBE KIHT
     %% =========================
-    F[PUHASTUSKIHT ]
+    F[(PUHASTUSKIHT)]
     F1[kuupäevade ühtlustamine]
     F2[piirkondade seostamine]
     F3[diagnooside standardiseerimine/valideerimine ICD-10 abil]
@@ -92,7 +94,7 @@ flowchart LR
     %% =========================
     %% ÄRIKIHT / KULD KIHT
     %% =========================
-    G[ÄRIKIHT]
+    G[(ÄRIKIHT)]
     G1[dim_region]
     G2[dim_diagnosis]
     G3[dim_date]
