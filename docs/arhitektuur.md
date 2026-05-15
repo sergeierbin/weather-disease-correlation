@@ -1,11 +1,39 @@
 # Arhitektuuri dokumentatsioon
-1. [Andmevoo skeem](#andmevoo-skeemAndmevooskeem)
-2. [ER-diagramm](#täheskeemi-realisatsioon-er-diagrammina)
+1.[Andmeallikad](#andmeallikad)
+2.[Andmevoo skeem](#andmevoo-skeem)
+3.[ER-diagramm](#täheskeemi-realisatsioon-er-diagrammina)
 
+Skeemid on loodud Mermaidi süntaksis. Et näha neid graafilisel kujul otse VS Code'is, on soovitatav kasutada Mermaid Editor või Markdown Preview Mermaid Support laiendust.
+
+## Andmeallikad
+```mermaid
+%% Andmeallikad
+
+graph LR
+    subgraph Andmeallikad
+        A[Synthea andmestik] 
+        B[WHO ICD-10 API<br/>või<br/>TEHIK Terminoloogiaserver]
+        C[Ilmaandmete API]
+    end
+
+    subgraph Puhastuskiht
+        D[(PATIENT)]
+        E[(DIAGNOSE)]
+        F[(LOCATION)]
+        G[(ICD-10)]
+        H[(WEATHER)]
+    end
+
+    A --> D
+    A --> E
+    A --> F
+    
+    B --> G
+
+    C --> H
+```
 
 ## Andmevoo skeem
-Andmevoo skeemi visualiseerimiseks on kasutatud mermaidi teeki markdownis, mis vajab laienduse eelnevat allalaadimist, eelvaate kuvamiseks.
-
 Andmevoo skeemis eristatakse andmetoru jaoks kolme kihti: toorkiht, puhastuskiht ning ärikiht
 
 ```mermaid
@@ -164,5 +192,6 @@ title: Toorkihist puhastuskihi ER-diagramm
 erDiagram
     PATIENT ||--o{ DIAGNOSE : gets
     DIAGNOSE ||--|{ ICD-10 : contains
-    PATIENT }|..|{ ADDRESS : uses
+    PATIENT }|..|{ LOCATION : uses
+    LOCATION ||--o{ WEATHER : has
 ```

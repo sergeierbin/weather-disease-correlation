@@ -3,5 +3,6 @@ title: Toorkihist puhastuskihi ER-diagramm
 ---
 erDiagram
     PATIENT ||--o{ DIAGNOSE : gets
-    DIAGNOSE ||--|{ ICD-10 : contains
-    PATIENT }|..|{ ADDRESS : uses
+    DIAGNOSE ||--|{ ICD-10 : references
+    PATIENT }|..|{ LOCATION : uses
+    LOCATION ||--o{ WEATHER : has
