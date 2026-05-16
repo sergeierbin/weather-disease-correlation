@@ -95,14 +95,15 @@ services:
             https://github.com/synthetichealth/synthea/releases/download/master-branch-latest/synthea-with-dependencies.jar
         fi
         # Generate synthetic patients; population size comes from .env (default 100)
-        # No state/city specified — Synthea picks random US locations each run
+        # Massachusetts specified to avoid Synthea's state validation error
         java -jar synthea-with-dependencies.jar \
           -p ${SYNTHEA_POPULATION:-100} \
+          Massachusetts \
           --exporter.baseDirectory=/synthea/output \
-          --exporter.fhir.export=true \   # FHIR R4 JSON bundles — one file per patient
-          --exporter.csv.export=false \   # CSV has fewer fields than FHIR; not needed
-          --exporter.ccda.export=false \  # Clinical document format; not needed
-          --exporter.cpcds.export=false   # Claims format; not needed
+          --exporter.fhir.export=true \
+          --exporter.csv.export=false \
+          --exporter.ccda.export=false \
+          --exporter.cpcds.export=false
 
   # ── Airflow one-time initialisation ─────────────────────────────────────────
   # Run once before starting the webserver and scheduler:
