@@ -73,9 +73,11 @@ with DAG(
     # Executes the full dbt lineage:
     #   raw → staging (views) → intermediate (views) → marts (tables)
     # Must run after all ingestion tasks so the raw schema is fully populated.
+    # chmod ensures dbt can write logs/ and target/ inside the mounted volume.
     dbt_run = BashOperator(
         task_id="dbt_run",
         bash_command=(
+            "chmod -R 777 /opt/airflow/dbt && "
             "/home/airflow/.local/bin/dbt run "
             "--project-dir /opt/airflow/dbt "
             "--profiles-dir /opt/airflow/dbt"
