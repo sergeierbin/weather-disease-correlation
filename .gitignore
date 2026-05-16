@@ -1,0 +1,35 @@
+# ── Project context files (not for version control) ─────────────────────────
+PROMPT.md
+PROGRESS.md
+
+# ── Secrets ──────────────────────────────────────────────────────────────────
+.env
+
+# ── Patient data (can be large, privacy-sensitive) ───────────────────────────
+synthea/output/
+
+# ── dbt build artifacts ──────────────────────────────────────────────────────
+dbt/logs/
+dbt/target/
+
+# ── Airflow runtime logs ──────────────────────────────────────────────────────
+airflow/logs/
+
+# ── Python ───────────────────────────────────────────────────────────────────
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+*.egg-info/
+dist/
+build/
+
+# ── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Docker volumes & local state ─────────────────────────────────────────────
+*.log
+
+# ── Synthea JAR (large binary, download on first run) ────────────────────────
+synthea/synthea-with-dependencies.jar

@@ -1,0 +1,41 @@
+name: etl_project
+version: "1.0.0"
+
+# Profile name must match the key in profiles.yml
+profile: etl_project
+
+# Paths relative to this file
+model-paths:    ["models"]
+seed-paths:     ["seeds"]
+test-paths:     ["tests"]
+analysis-paths: ["analyses"]
+macro-paths:    ["macros"]
+
+target-path: "target"   # Compiled SQL goes here (gitignored)
+log-path:    "logs"     # dbt logs go here (gitignored)
+clean-targets: [target, dbt_packages]
+
+models:
+  etl_project:
+    # The "+" prefix means the setting applies to all models in that folder.
+    # schema:       which PostgreSQL schema to write the model into
+    # materialized: "view" = no data stored, always fresh;
+    #               "table" = data copied into DB, faster reads
+
+    # staging/ — cleans and casts raw source data
+    # Views are used so staging always reflects the latest raw data without duplication
+    staging:
+      +schema:       staging
+      +materialized: view
+
+    # intermediate/ — joins and business logic built on top of staging models
+    # Promote to table if downstream queries become slow
+    intermediate:
+      +schema:       intermediate
+      +materialized: view
+
+    # marts/ — final analytical models consumed by Superset
+    # Tables give Superset fast reads without re-running transformation SQL on every request
+    marts:
+      +schema:       marts
+      +materialized: table

@@ -1,0 +1,204 @@
+version: "3.8"
+
+# Shared configuration block reused by all Airflow services (webserver, scheduler, init).
+# The &airflow-common anchor is referenced with <<: *airflow-common below.
+x-airflow-common:
+  &airflow-common
+  image: apache/airflow:2.9.3-python3.11
+  environment:
+    &airflow-common-env
+    # Run tasks in the same process as the scheduler (no separate worker needed)
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    # Airflow stores its own metadata (DAG runs, task state) in PostgreSQL
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/${AIRFLOW_DB}
+    # Secret key used to encrypt sensitive data in the Airflow DB (connections, variables)
+    AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
+    # Secret key for signing Flask session cookies
+    AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_SECRET_KEY}
+    # Do not load Airflow's built-in example DAGs on startup
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    # How often the scheduler rescans the DAGs folder (seconds)
+    AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL: "30"
+    # Extra Python packages installed at container startup.
+    # For production, bake these into a custom Docker image instead.
+    _PIP_ADDITIONAL_REQUIREMENTS: >-
+      psycopg2-binary==2.9.9
+      numpy==1.26.4
+      pandas==2.1.4
+      meteostat==1.6.8
+      requests==2.31.0
+      dbt-core==1.8.6
+      dbt-postgres==1.8.2
+    # Warehouse credentials forwarded to DAGs so they can write to PostgreSQL
+    POSTGRES_HOST: postgres
+    POSTGRES_PORT: "5432"
+    POSTGRES_USER: ${POSTGRES_USER}
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    POSTGRES_DB: ${POSTGRES_DB}
+    # WHO ICD-10 API credentials forwarded to the ingestion DAG
+    ICD_CLIENT_ID: ${ICD_CLIENT_ID}
+    ICD_CLIENT_SECRET: ${ICD_CLIENT_SECRET}
+  volumes:
+    - ./airflow/dags:/opt/airflow/dags          # DAG definitions
+    - ./ingestion:/opt/airflow/ingestion         # Ingestion scripts called by DAGs
+    - ./synthea/output:/opt/airflow/synthea_output  # FHIR JSON files produced by Synthea
+    - ./dbt:/opt/airflow/dbt                     # dbt project run by the DAG
+    - airflow_logs:/opt/airflow/logs             # Persistent task logs
+  depends_on:
+    &airflow-common-depends-on
+    # All Airflow services wait until PostgreSQL passes its health check
+    postgres:
+      condition: service_healthy
+
+services:
+
+  # ── PostgreSQL 17 ────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:17
+    container_name: etl_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"  # Expose on host so you can connect with psql or DBeaver
+    volumes:
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql  # Runs once on first start
+      - postgres_data:/var/lib/postgresql/data                     # Data persists across restarts
+    healthcheck:
+      # Other services use this check before they start
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Synthea FHIR patient data generator ─────────────────────────────────────
+  # Not started automatically — run on demand with:
+  #   docker compose --profile synthea run --rm synthea
+  synthea:
+    image: eclipse-temurin:17-jre-jammy
+    container_name: etl_synthea
+    profiles:
+      - synthea  # Only active when --profile synthea is passed
+    volumes:
+      - ./synthea:/synthea  # JAR and output are stored on the host
+    working_dir: /synthea
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        # Download the JAR only on the first run; reuse it afterwards
+        if [ ! -f synthea-with-dependencies.jar ]; then
+          echo "Downloading Synthea JAR (first run only)..."
+          apt-get update -qq && apt-get install -y -qq wget
+          wget -q -O synthea-with-dependencies.jar \
+            https://github.com/synthetichealth/synthea/releases/download/master-branch-latest/synthea-with-dependencies.jar
+        fi
+        # Generate synthetic patients; population size comes from .env (default 100)
+        # No state/city specified — Synthea picks random US locations each run
+        java -jar synthea-with-dependencies.jar \
+          -p ${SYNTHEA_POPULATION:-100} \
+          --exporter.baseDirectory=/synthea/output \
+          --exporter.fhir.export=true \   # FHIR R4 JSON bundles — one file per patient
+          --exporter.csv.export=false \   # CSV has fewer fields than FHIR; not needed
+          --exporter.ccda.export=false \  # Clinical document format; not needed
+          --exporter.cpcds.export=false   # Claims format; not needed
+
+  # ── Airflow one-time initialisation ─────────────────────────────────────────
+  # Run once before starting the webserver and scheduler:
+  #   docker compose --profile tools run --rm airflow-init
+  airflow-init:
+    <<: *airflow-common
+    container_name: etl_airflow_init
+    profiles:
+      - tools  # Only active when --profile tools is passed
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        # Apply DB migrations and create the admin user (--profile tools, run once)
+        airflow db migrate
+        airflow users create \
+          --username ${AIRFLOW_WWW_USER_USERNAME} \
+          --password ${AIRFLOW_WWW_USER_PASSWORD} \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email admin@example.com || true  # Ignore error if user already exists
+
+  # ── Airflow Webserver ────────────────────────────────────────────────────────
+  # UI available at http://localhost:8080
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: etl_airflow_webserver
+    command: webserver
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s  # Give Airflow time to boot before the first check
+
+  # ── Airflow Scheduler ────────────────────────────────────────────────────────
+  # Parses DAGs and triggers task runs according to their schedule
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: etl_airflow_scheduler
+    command: scheduler
+    healthcheck:
+      test: ["CMD-SHELL", "airflow jobs check --job-type SchedulerJob --hostname \"$$(hostname)\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ── Superset one-time initialisation ────────────────────────────────────────
+  # Run once before starting superset:
+  #   docker compose --profile tools run --rm superset-init
+  superset-init:
+    image: apache/superset:3.1.3
+    container_name: etl_superset_init
+    profiles:
+      - tools  # Only active when --profile tools is passed
+    environment:
+      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY}
+    volumes:
+      - superset_data:/app/superset_home
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        # Migrate Superset's internal DB, create admin user, and load default roles
+        superset db upgrade &&
+        superset fab create-admin \
+          --username ${SUPERSET_ADMIN_USERNAME} \
+          --firstname Admin \
+          --lastname User \
+          --email admin@example.com \
+          --password ${SUPERSET_ADMIN_PASSWORD} &&
+        superset init
+
+  # ── Superset 3.x ─────────────────────────────────────────────────────────────
+  # Dashboard UI available at http://localhost:8088
+  superset:
+    image: apache/superset:3.1.3
+    container_name: etl_superset
+    environment:
+      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY}
+    ports:
+      - "8088:8088"
+    volumes:
+      - superset_data:/app/superset_home  # Dashboards and settings persist across restarts
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:   # PostgreSQL table data
+  airflow_logs:    # Airflow task execution logs
+  superset_data:   # Superset dashboards and config

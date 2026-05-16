@@ -1,0 +1,19 @@
+# dbt connection profile for the ETL project.
+# Credentials are read from environment variables — never hardcoded here.
+# Inside Docker: variables are set by docker-compose.yml environment block.
+# Locally: variables are loaded from .env (e.g. via `export $(cat .env | xargs)`).
+
+etl_project:
+  target: dev   # Active output — change to "prod" to add a separate production target
+  outputs:
+    dev:
+      type:     postgres
+      # env_var('KEY') reads from the environment; the second argument is an optional default.
+      # Without a default, dbt raises an error at startup if the variable is not set.
+      host:     "{{ env_var('POSTGRES_HOST', 'localhost') }}"
+      port:     "{{ env_var('POSTGRES_PORT', '5432') | int }}"  # | int casts the string to integer
+      dbname:   "{{ env_var('POSTGRES_DB') }}"
+      user:     "{{ env_var('POSTGRES_USER') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD') }}"
+      schema:   raw   # Fallback schema — each model layer overrides this in dbt_project.yml
+      threads:  4     # How many models dbt runs in parallel (increase for larger projects)
