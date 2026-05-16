@@ -19,6 +19,10 @@ x-airflow-common:
     AIRFLOW__CORE__LOAD_EXAMPLES: "false"
     # How often the scheduler rescans the DAGs folder (seconds)
     AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL: "30"
+    # Keep users logged in for 8 hours
+    AIRFLOW__WEBSERVER__JWT_EXPIRATION_DELTA: "480"
+    # Flask session lifetime in seconds (8 hours)
+    AIRFLOW__WEBSERVER__WEB_SERVER_SESSION_LIFETIME: "28800"
     # Extra Python packages installed at container startup.
     # For production, bake these into a custom Docker image instead.
     _PIP_ADDITIONAL_REQUIREMENTS: >-
@@ -191,6 +195,9 @@ services:
     container_name: etl_superset
     environment:
       SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY}
+      # Keep users logged in for 8 hours
+      SUPERSET_SESSION_COOKIE_SAMESITE: Lax
+      SUPERSET_PERMANENT_SESSION_LIFETIME: "28800"
     ports:
       - "8088:8088"
     volumes:
