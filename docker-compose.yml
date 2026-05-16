@@ -23,6 +23,8 @@ x-airflow-common:
     AIRFLOW__WEBSERVER__JWT_EXPIRATION_DELTA: "480"
     # Flask session lifetime in seconds (8 hours)
     AIRFLOW__WEBSERVER__WEB_SERVER_SESSION_LIFETIME: "28800"
+    # Permanent session so cookie does not expire when browser is open
+    AIRFLOW__WEBSERVER__SESSION_LIFETIME_DAYS: "1"
     # Extra Python packages installed at container startup.
     # For production, bake these into a custom Docker image instead.
     _PIP_ADDITIONAL_REQUIREMENTS: >-

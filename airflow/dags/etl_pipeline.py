@@ -76,7 +76,7 @@ with DAG(
     dbt_run = BashOperator(
         task_id="dbt_run",
         bash_command=(
-            "dbt run "
+            "/home/airflow/.local/bin/dbt run "
             "--project-dir /opt/airflow/dbt "
             "--profiles-dir /opt/airflow/dbt"
         ),
