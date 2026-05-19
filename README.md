@@ -21,13 +21,10 @@ Küsimus: **"Kuidas jaotuvad enim levinud diagnoosid piirkonniti ning kas esineb
 Projekti eesmärk on uurida, kuidas jaotuvad diagnoosid piirkonniti ning kas vihmastel ilmastikutingimustel võib olla seos kroonilise valu või liigesevalu diagnooside sagedasema esinemisega. Selleks analüüsitakse, millised diagnoosid on erinevates piirkondades kõige levinumad, kui palju esineb kroonilise valu või liigesevalu diagnoosiga patsiente ning kas vihmastel päevadel on nende patsientide arv piirkonniti suurem. Lisaks võrreldakse piirkondade lõikes vihmaste päevade osakaalu, et hinnata, kas ilmastikutingimuste ja vaadeldavate diagnooside vahel võib esineda seos.
 
 **Mõõdikud**
-1. Kroonilise valu või liigesevalu diagnoosiga patsientide arv piirkonniti  
-    Patsientide arv igas piirkonnas, kellel esineb kroonilise valu või liigesevaluga seotud diagnoos.
-2. Vihmastel päevadel kroonilise valu või liigesevalu diagnoosiga patsientide arv piirkonniti  
-    Patsientide arv piirkondades, kus kroonilise valu või liigesevalu diagnoosiga patsiendid langevad kokku vihmaste päevadega valitud perioodil.
+1. Kroonilise valu või liigesevalu diagnooside esinemissagedus 1000 patsiendi kohta piirkonniti.
+2. Keskmine uute sümptomite tekkimise arv külmadel ja vihmastel/rõhulangusega päevadel vs kuivadel ja päikeselistel päevadel piirkonniti.  
 3. Vihmaste päevade osakaal piirkonniti (%)
-4. Kas haiguste ägenemist mõjutab pigem vihm?
-5. Kas temperatuuril või muudel teguritel on mingi mõju?
+4. Ilmastikuindeksi mõju: diagnooside jagunemine kombineeritud ilmastikutikutüüpide lõikes. (külm ja rõske / soe ja vihmane / järsk õhurõhu langus / stabiilne kuiv ilm)
 
 ### Andmeallikad
 1. Ilmastikuandmete API
@@ -39,7 +36,7 @@ Arhitektuuri dokumentatsioon on koostatud mermaid diagrammi kasutades.
 Kujutatud on andmevoogu, kuidas andmete sissevõtt toimub ning kuidas transformatsioonidega on jõutud ärikihini. 
 Projekti andmed oleme üles ehitanud täheskeemi põhimõttel, kus konteksti oleme toonud dimensiooni tabelitesse ja faktid faktitabelitesse. 
 
-Projekti arhitektuur kujuneb [siin](arhitektuur.md)  
+Projekti arhitektuur kujuneb [siin](docs/arhitektuur.md)  
 
 
 ### Andmestik
