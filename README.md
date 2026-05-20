@@ -16,15 +16,15 @@
 
 ### Äriküsimus
 
-Küsimus: **"Kuidas jaotuvad enim levinud diagnoosid piirkonniti ning kas esineb statistiliselt oluline seos vihmaste ilmastikutingimuste ja kroonilise valu või liigesevalu diagnooside sagenemise vahel?"**
+Küsimus: **"Kuidas erinevad ilmastikutingimused mõjutavad krooniliste ja/või valuga seotud haiguste esinemist erinevates piirkondades?"**
 
-Projekti eesmärk on uurida, kuidas jaotuvad diagnoosid piirkonniti ning kas vihmastel ilmastikutingimustel võib olla seos kroonilise valu või liigesevalu diagnooside sagedasema esinemisega. Selleks analüüsitakse, millised diagnoosid on erinevates piirkondades kõige levinumad, kui palju esineb kroonilise valu või liigesevalu diagnoosiga patsiente ning kas vihmastel päevadel on nende patsientide arv piirkonniti suurem. Lisaks võrreldakse piirkondade lõikes vihmaste päevade osakaalu, et hinnata, kas ilmastikutingimuste ja vaadeldavate diagnooside vahel võib esineda seos.
+Projekti eesmärk on uurida, kuidas jaotuvad valuga seotud diagnoosid piirkonniti ning kas vihmastel ilmastikutingimustel võib olla seos kroonilise valu või liigesevalu diagnooside sagedasema esinemisega. Selleks analüüsitakse, kui palju esineb piirkonnas valudiagnoosiga patsiente ning kas vihmastel/madala õhurõhuga päevadel on nende patsientide arv suurem. Lisaks võrreldakse piirkondade lõikes vihmaste päevade osakaalu, et hinnata, kas ilmastikutingimuste ja vaadeldavate diagnooside vahel võib esineda seos.
 
 **Mõõdikud**
-1. Kroonilise valu või liigesevalu diagnooside esinemissagedus 1000 patsiendi kohta piirkonniti.
-2. Keskmine uute sümptomite tekkimise arv külmadel ja vihmastel/rõhulangusega päevadel vs kuivadel ja päikeselistel päevadel piirkonniti.  
-3. Vihmaste päevade osakaal piirkonniti (%)
-4. Ilmastikuindeksi mõju: diagnooside jagunemine kombineeritud ilmastikutikutüüpide lõikes. (külm ja rõske / soe ja vihmane / järsk õhurõhu langus / stabiilne kuiv ilm)
+1. Valuga seotud haiguste esinemissagedus 1000 patsiendi kohta Massachusettsi ja California piirkondades. 
+2. Vihmaste päevade osakaal piirkonniti (%)
+3. Valuga seotud haiguste progresseerumine kombineeritud ilmastikutüüpide lõikes (külm ja rõske / soe ja vihmane / järsk õhurõhu langus / stabiilne kuiv ilm)
+3. Ilmastikuindeksi mõju: haiguste jagunemine kombineeritud ilmastikutikutüüpide lõikes. (külm ja rõske / soe ja vihmane / järsk õhurõhu langus / stabiilne kuiv ilm)
 
 ### Andmeallikad
 1. Ilmastikuandmete API
