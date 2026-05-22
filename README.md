@@ -3,18 +3,18 @@
 ##### Analysis correlation between weather conditions and diagnoses
 
 ### Sisukord
-    - [Äriküsimus](#äriküsimus)
-    - [Andmeallikad](#andmeallikad)
-    - [Arhitektuur](#arhitektuur)
-    - [Andmestik](#andmestik)
-    - [Riskid](#riskid)
-    - [Andmekvaliteedi testid](#andmekvaliteedi-testid)
-    - [Stack](#stack)
-    - [Käivitamine](#käivitamine)
-    - [Saladused ja konfiguratsioon](#saladused-ja-konfiguratsioon)
-    - [Projekti struktuur](#projekti-struktuur)
-    - [Kokkuvõte, puudused ja võimalikud edasiarendused](#kokkuvõte-puudused-ja-võimalikud-edasiarendused)
-    - [Meeskond](#meeskond)
+- [Äriküsimus](#äriküsimus)
+- [Andmeallikad](#andmeallikad)
+- [Arhitektuur](#arhitektuur)
+- [Andmestik](#andmestik)
+- [Riskid](#riskid)
+- [Andmekvaliteedi testid](#andmekvaliteedi-testid)
+- [Stack](#stack)
+- [Käivitamine](#käivitamine)
+- [Saladused ja konfiguratsioon](#saladused-ja-konfiguratsioon)
+- [Projekti struktuur](#projekti-struktuur)
+- [Kokkuvõte, puudused ja võimalikud edasiarendused](#kokkuvõte-puudused-ja-võimalikud-edasiarendused)
+- [Meeskond](#meeskond)
 
 ### Äriküsimus
 
