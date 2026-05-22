@@ -3,16 +3,23 @@
 ##### Analysis correlation between weather conditions and diagnoses
 
 ### Sisukord
-1. [Andmeallikad](#andmeallikad)
-2. [Arhitektuur](#arhitektuur)
-3. [Andmestik](#andmestik)
-4. [Andmekvaliteet](#andmekvaliteedi-testid)
-5. [Stack](#stack)
-6. [Käivitamine](#käivitamine)
-7. [Saladused ja konfiguratsioon](#saladused-ja-konfiguratsioon)
-8. [Projekti struktuur](#projekti-struktuur)
-9. [Kokkuvõte](#kokkuvõte-puudused-ja-võimalikud-edasiarendused)
-10. [Meeskond](#meeskond)
+- [TEHIK - Ilmastiku mõju haiguste esinemisele](#tehik---ilmastiku-mõju-haiguste-esinemisele)
+        - [Analysis correlation between weather conditions and diagnoses](#analysis-correlation-between-weather-conditions-and-diagnoses)
+    - [Sisukord](#sisukord)
+    - [Äriküsimus](#äriküsimus)
+    - [Andmeallikad](#andmeallikad)
+    - [Arhitektuur](#arhitektuur)
+    - [Andmestik](#andmestik)
+    - [Riskid](#riskid)
+    - [Andmekvaliteedi testid](#andmekvaliteedi-testid)
+    - [Stack](#stack)
+    - [Käivitamine](#käivitamine)
+    - [Saladused ja konfiguratsioon](#saladused-ja-konfiguratsioon)
+    - [Projekti struktuur](#projekti-struktuur)
+  - [Andmebaasi skeemid](#andmebaasi-skeemid)
+  - [Star schema](#star-schema)
+    - [Kokkuvõte, puudused ja võimalikud edasiarendused](#kokkuvõte-puudused-ja-võimalikud-edasiarendused)
+    - [Meeskond](#meeskond)
 
 ### Äriküsimus
 
@@ -40,18 +47,18 @@ Projekti arhitektuur kujuneb [siin](docs/arhitektuur.md)
 
 ### Andmestik
 
-| Allikas | Tüüp | Ajas muutuv? | Roll |
-|---------|------|--------------|------|
-| Ilmastikuandmed | [API ] | Jah, [iga tund / päevas / muu] | Põhiandmevoog |
-| WHO rahvusvaheliste haiguste klassifikaator | API | Ei, staatiline | Kõrvaltabel |
-| Sünteetilised terviseandmed | [seed] | Ei, staatiline | Kõrvaltabel |
+| Allikas                                     | Tüüp   | Ajas muutuv?                   | Roll          |
+| ------------------------------------------- | ------ | ------------------------------ | ------------- |
+| Ilmastikuandmed                             | [API ] | Jah, [iga tund / päevas / muu] | Põhiandmevoog |
+| WHO rahvusvaheliste haiguste klassifikaator | API    | Ei, staatiline                 | Kõrvaltabel   |
+| Sünteetilised terviseandmed                 | [seed] | Ei, staatiline                 | Kõrvaltabel   |
 
 ### Riskid
 
-| Risk | Mõju | Maandus |
-|------|------|---------|
-| Sünteetiliste andmete kasutamise risk | Synthea on tõenäosuspõhine andmegeneraator. See tähendab, et reaalses elus eksisteerivat seost ei pruugi sünteetilised andmed peegeldada. Lõplik analüüs gold-kihis võib ekslikku või statistiliselt mitteolulist tulemust näidata. | Projekti eesmärk on andmetorustiku ja analüütika raamistiku töökindluse testimine, mitte meditsiinilise tõe välja selgitamine. Proovime disainida skaleeruva süsteemi, mida oleks võimalik ka reaalandmetega katsetada. |
-| Käitumuslik nihe | Andmetes võib tekkida näiline negatiivne korrelatsioon valu ja halva ilma vahel -- sümptomid tegelikult ägenesid, aga registreeritud juhtumeid oli vähem. | Analüüsis kasutatakse onsetDateTime andmevälja (tegelik sümptomite algus), mitte arstivisiidi kuupäeva. See vähendab käitumusliku nihke mõju. |
+| Risk                                  | Mõju                                                                                                                                                                                                                                                  | Maandus                                                                                                                                                                                                                                                                                                                                             |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sünteetiliste andmete kasutamise risk | Synthea on tõenäosuspõhine andmegeneraator. See tähendab, et reaalses elus eksisteerivat seost ei pruugi sünteetilised andmed peegeldada. Lõplik analüüs gold-kihis võib ekslikku või statistiliselt mitteolulist tulemust näidata.                   | Projekti eesmärk on andmetorustiku ja analüütika raamistiku töökindluse testimine, mitte meditsiinilise tõe välja selgitamine. Proovime disainida skaleeruva süsteemi, mida oleks võimalik ka reaalandmetega katsetada.                                                                                                                             |
+| Käitumuslik nihe                      | Andmetes võib tekkida näiline negatiivne korrelatsioon valu ja halva ilma vahel -- sümptomid tegelikult ägenesid, aga registreeritud juhtumeid oli vähem.                                                                                             | Analüüsis kasutatakse onsetDateTime andmevälja (tegelik sümptomite algus), mitte arstivisiidi kuupäeva. See vähendab käitumusliku nihke mõju.                                                                                                                                                                                                       |
 | Terminoloogia kaardistuse ebapiisavus | Kui patsiendil on haruldasem liigesehaigus või valudiagnoos, mille SNOMED kood ei ole referentstabelis esindatud, siis jääb see statistikast välja.  Erinevates piirkondades võivad arstid eelistada erinevaid SNOMED koode (regionaalne varieeruvus) | Tiimil on olemas kompetents, et kaardistada ära kõik olulisemad terminoloogia koodid, mis põhinevad SNOMED International ametlikul kaardistusel. Täiendavalt on võimalik luua andmekvaliteedi kontroll, mis logiks kõik Condition ressursi progresseeruva (recurrence) staatusega haigused eraldi tabelisse, kuid see ei kuulu praeguse töö skoopi. |
 
 ### Andmekvaliteedi testid
@@ -64,13 +71,13 @@ Testide tulemused: []
 
 ### Stack
 
-| Komponent | Tööriist |
-|-----------|---------|
-| Sissevõtt | [Airflow] |
-| Transformatsioon | [dbt] |
-| Andmehoidla | PostgreSQL |
-| Näidikulaud | [Superset] |
-| Orkestreerimine | [Airflow] |
+| Komponent        | Tööriist   |
+| ---------------- | ---------- |
+| Sissevõtt        | [Airflow]  |
+| Transformatsioon | [dbt]      |
+| Andmehoidla      | PostgreSQL |
+| Näidikulaud      | [Superset] |
+| Orkestreerimine  | [Airflow]  |
 
 ### Käivitamine
 
@@ -133,12 +140,12 @@ etl_project/
 
 ## Andmebaasi skeemid
 
-| Skeem | Tüüp | Kirjeldus |
-|---|---|---|
-| `raw` | tabelid | Laaditud andmed muutmata kujul |
-| `staging` | vaated (views) | Puhastatud ja ümber nimetatud veerud |
-| `intermediate` | vaated (views) | Tabelite ühendamine äriloogika jaoks |
-| `marts` | tabelid | Lõplik star schema — Superset loeb siit |
+| Skeem          | Tüüp           | Kirjeldus                               |
+| -------------- | -------------- | --------------------------------------- |
+| `raw`          | tabelid        | Laaditud andmed muutmata kujul          |
+| `staging`      | vaated (views) | Puhastatud ja ümber nimetatud veerud    |
+| `intermediate` | vaated (views) | Tabelite ühendamine äriloogika jaoks    |
+| `marts`        | tabelid        | Lõplik star schema — Superset loeb siit |
 
 ## Star schema
 
@@ -164,9 +171,9 @@ dim_patients ── fct_encounters ── dim_conditions
 
 ### Meeskond
 
-| Nimi | Roll |
-|------|------|
-| Sergei Erbin | Tehniline stack |
-| Maria Kuusik | Andmekvaliteet |
-| Kalder Maarand | Transformatsioonid |
-| Scharlett Hansson | Arhitektuur |
+| Nimi              | Roll               |
+| ----------------- | ------------------ |
+| Sergei Erbin      | Tehniline stack    |
+| Maria Kuusik      | Andmekvaliteet     |
+| Kalder Maarand    | Transformatsioonid |
+| Scharlett Hansson | Arhitektuur        |
