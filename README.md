@@ -29,7 +29,7 @@ Projekti eesmärk on uurida, kuidas jaotuvad valuga seotud diagnoosid piirkonnit
 
 ### Andmeallikad
 1. Ilmastikuandmete API
-2. WHO rahvusvaheliste haiguste klassifikaator  - [ICD-10](https://icd.who.int/icdapi)
+2. SNOMED CT - ICD-10 maping excel tabelina
 3. Sünteetilised terviseandmed HL7 FHIR andmevahetusstandardis [Synthea](https://github.com/synthetichealth/synthea)
 
 ### Arhitektuur
