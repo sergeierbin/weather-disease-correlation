@@ -24,7 +24,6 @@ Projekti eesmärk on uurida, kuidas jaotuvad valuga seotud diagnoosid piirkonnit
 1. Valuga seotud haiguste esinemissagedus 1000 patsiendi kohta Massachusettsi ja California piirkondades. 
 2. Vihmaste päevade osakaal piirkonniti (%)
 3. Valuga seotud haiguste progresseerumine kombineeritud ilmastikutüüpide lõikes (külm ja rõske / soe ja vihmane / järsk õhurõhu langus / stabiilne kuiv ilm)
-3. Ilmastikuindeksi mõju: haiguste jagunemine kombineeritud ilmastikutikutüüpide lõikes. (külm ja rõske / soe ja vihmane / järsk õhurõhu langus / stabiilne kuiv ilm)
 
 ### Andmeallikad
 1. Ilmastikuandmete API
@@ -47,8 +46,21 @@ Projekti arhitektuur kujuneb [siin](docs/arhitektuur.md)
 | WHO rahvusvaheliste haiguste klassifikaator | API | Ei, staatiline | Kõrvaltabel |
 | Sünteetilised terviseandmed | [seed] | Ei, staatiline | Kõrvaltabel |
 
+### Riskid
+
+| Risk | Mõju | Maandus |
+|------|------|---------|
+| Sünteetiliste andmete kasutamise risk | Synthea on tõenäosuspõhine andmegeneraator. See tähendab, et reaalses elus eksisteerivat seost ei pruugi sünteetilised andmed peegeldada. Lõplik analüüs gold-kihis võib ekslikku või statistiliselt mitteolulist tulemust näidata. | Projekti eesmärk on andmetorustiku ja analüütika raamistiku töökindluse testimine, mitte meditsiinilise tõe välja selgitamine. Proovime disainida skaleeruva süsteemi, mida oleks võimalik ka reaalandmetega katsetada. |
+| Käitumuslik nihe | Andmetes võib tekkida näiline negatiivne korrelatsioon valu ja halva ilma vahel -- sümptomid tegelikult ägenesid, aga registreeritud juhtumeid oli vähem. | Analüüsis kasutatakse onsetDateTime andmevälja (tegelik sümptomite algus), mitte arstivisiidi kuupäeva. See vähendab käitumusliku nihke mõju. |
+| Terminoloogia kaardistuse ebapiisavus | Kui patsiendil on haruldasem liigesehaigus või valudiagnoos, mille SNOMED kood ei ole referentstabelis esindatud, siis jääb see statistikast välja.  Erinevates piirkondades võivad arstid eelistada erinevaid SNOMED koode (regionaalne varieeruvus) | Tiimil on olemas kompetents, et kaardistada ära kõik olulisemad terminoloogia koodid, mis põhinevad SNOMED International ametlikul kaardistusel. Täiendavalt on võimalik luua andmekvaliteedi kontroll, mis logiks kõik Condition ressursi progresseeruva (recurrence) staatusega haigused eraldi tabelisse, kuid see ei kuulu praeguse töö skoopi. |
 
 ### Andmekvaliteedi testid
+Projekt kontrollib järgmist:
+
+[Test 1 - ]
+[Test 2 - ]
+[Test 3 - ]
+Testide tulemused: []
 
 ### Stack
 
@@ -154,7 +166,7 @@ dim_patients ── fct_encounters ── dim_conditions
 
 | Nimi | Roll |
 |------|------|
-| Sergei Erbin | [Tehniline stack] |
-| Maria Kuusik | [Andmekvaliteet] |
-| Kalder Maarand | [Transformatsioonid] |
-| Scharlett Hansson | [Arhitektuur] |
+| Sergei Erbin | Tehniline stack |
+| Maria Kuusik | Andmekvaliteet |
+| Kalder Maarand | Transformatsioonid |
+| Scharlett Hansson | Arhitektuur |
