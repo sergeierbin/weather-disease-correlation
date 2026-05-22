@@ -3,9 +3,6 @@
 ##### Analysis correlation between weather conditions and diagnoses
 
 ### Sisukord
-- [TEHIK - Ilmastiku mõju haiguste esinemisele](#tehik---ilmastiku-mõju-haiguste-esinemisele)
-        - [Analysis correlation between weather conditions and diagnoses](#analysis-correlation-between-weather-conditions-and-diagnoses)
-    - [Sisukord](#sisukord)
     - [Äriküsimus](#äriküsimus)
     - [Andmeallikad](#andmeallikad)
     - [Arhitektuur](#arhitektuur)
@@ -16,8 +13,6 @@
     - [Käivitamine](#käivitamine)
     - [Saladused ja konfiguratsioon](#saladused-ja-konfiguratsioon)
     - [Projekti struktuur](#projekti-struktuur)
-  - [Andmebaasi skeemid](#andmebaasi-skeemid)
-  - [Star schema](#star-schema)
     - [Kokkuvõte, puudused ja võimalikud edasiarendused](#kokkuvõte-puudused-ja-võimalikud-edasiarendused)
     - [Meeskond](#meeskond)
 
@@ -49,9 +44,9 @@ Projekti arhitektuur kujuneb [siin](docs/arhitektuur.md)
 
 | Allikas                                     | Tüüp   | Ajas muutuv?                   | Roll          |
 | ------------------------------------------- | ------ | ------------------------------ | ------------- |
-| Ilmastikuandmed                             | [API ] | Jah, [iga tund / päevas / muu] | Põhiandmevoog |
-| WHO rahvusvaheliste haiguste klassifikaator | API    | Ei, staatiline                 | Kõrvaltabel   |
-| Sünteetilised terviseandmed                 | [seed] | Ei, staatiline                 | Kõrvaltabel   |
+| Ilmastikuandmed   | API  | Jah, päevas | Põhiandmevoog |
+| SNOMED CT - ICD-10 maping | seed | Ei, staatiline | Kõrvaltabel   |
+| Sünteetilised terviseandmed | seed |JAH, iga päev ?  | Kõrvaltabel   |
 
 ### Riskid
 
@@ -73,11 +68,11 @@ Testide tulemused: []
 
 | Komponent        | Tööriist   |
 | ---------------- | ---------- |
-| Sissevõtt        | [Airflow]  |
-| Transformatsioon | [dbt]      |
+| Sissevõtt        | Airflow  |
+| Transformatsioon | dbt      |
 | Andmehoidla      | PostgreSQL |
-| Näidikulaud      | [Superset] |
-| Orkestreerimine  | [Airflow]  |
+| Näidikulaud      | Superset |
+| Orkestreerimine  | Airflow  |
 
 ### Käivitamine
 
@@ -135,26 +130,6 @@ etl_project/
 └── airflow/
     └── dags/
         └── etl_pipeline.py     # Orkestreerib kõik sammud õiges järjekorras
-```
-
-
-## Andmebaasi skeemid
-
-| Skeem          | Tüüp           | Kirjeldus                               |
-| -------------- | -------------- | --------------------------------------- |
-| `raw`          | tabelid        | Laaditud andmed muutmata kujul          |
-| `staging`      | vaated (views) | Puhastatud ja ümber nimetatud veerud    |
-| `intermediate` | vaated (views) | Tabelite ühendamine äriloogika jaoks    |
-| `marts`        | tabelid        | Lõplik star schema — Superset loeb siit |
-
-## Star schema
-
-```
-                    dim_dates
-                       │
-dim_patients ── fct_encounters ── dim_conditions
-                       │
-                    dim_weather
 ```
 
 

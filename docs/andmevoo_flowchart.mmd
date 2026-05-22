@@ -11,7 +11,7 @@ flowchart LR
     A3[encounters]
     A4[demograafilised andmed]
 
-    B1[Rahvusvaheline haiguste klassifikaator / WHO ICD-10]
+    B1[SNOMED CT - ICD-10 maping]
 
     C[Ilmavaatluse API]
     C1[sademed]
@@ -44,101 +44,78 @@ flowchart LR
     C3 --> D
     C4 --> D
 
-    E1[raw_patients]
-    E2[raw_conditions]
-    E3[raw_encounters]
-    E4[raw_icd10]
-    E5[raw_weather]
-    E6[raw_countries, regions]
+    D1[raw_patients]
+    D2[raw_conditions]
+    D3[raw_encounters]
+    D4[raw_snomedct-icd10_maping]
+    D5[raw_weather]
+    D6[raw_regions]
 
-    D --> E1
-    D --> E2
-    D --> E3
-    D --> E4
-    D --> E5
-    D --> E6
+    D --> D1
+    D --> D2
+    D --> D3
+    D --> D4
+    D --> D5
+    D --> D6
 
     %% =========================
     %% PUHASTUSKIHT / HÕBE KIHT
     %% =========================
-    F[(PUHASTUSKIHT)]
-    F1[kuupäevade ühtlustamine]
-    F2[piirkondade seostamine]
-    F3[diagnooside standardiseerimine/valideerimine ICD-10 abil]
-    F4[kroonilise valu ja liigesevalu diagnooside filtreerimine]
-    F5[vihmaste päevade märgistamine]
+    E[(PUHASTUSKIHT)]
+    E1[dim_region]
+    E2[dim_patients]
+    E3[dim_diagnosis]
+    E4[dim_date]
+    %% faktitabel moodustub lausendist: ühel päeval esinenud ilm ühe piirkonna kohta
+    E5[fact_weather_region_day] 
+    %% faktitabel moodustub lausendist ühe patsiendi sümptomite algus ja lõpp ühe piirkonna kohta
+    E6[fact_patient_weather_region]
+    %% faktitabel moodustub lausendist ühe patsiendi sündmus ühes päevas
+    E7[fact_patient_day]
 
-    E1 --> F
-    E2 --> F
-    E3 --> F
-    E4 --> F
-    E5 --> F
-
-    F --> F1
-    F --> F2
-    F --> F3
-    F --> F4
-    F --> F5
+    D --> E
+     
+    E --> E1
+    E --> E2
+    E --> E3
+    E --> E4 
+    E --> E5
+    E --> E6
+    E --> E7   
+    E--> F
 
     %% =========================
     %% ÄRIKIHT / KULD KIHT
     %% =========================
-    G[(ÄRIKIHT)]
-    G1[dim_region]
-    G2[dim_diagnosis]
-    G3[dim_date]
-    G4[fact_diagnosis_region]
-    G5[fact_weather_region_day]
-    G6[fact_pain_weather_analysis]
+    F[(ÄRIKIHT)]
 
-    F1 --> G
-    F2 --> G
-    F3 --> G
-    F4 --> G
-    F5 --> G
-
-    G --> G1
-    G --> G2
-    G --> G3
-    G --> G4
-    G --> G5
-    G --> G6
+    F --> H
 
     %% =========================
     %% ANDMEKVALITEET
     %% =========================
-    H[Andmekvaliteedi testid]
-    H1[not null]
-    H2[unique]
-    H3[väärtuste vahemik]
-    H4[referentsseosed]
-    H5[duplikaatide kontroll]
+    G[Andmekvaliteedi testid]
+    G1[not null]
+    G2[unique]
+    G3[väärtuste vahemik]
+    G4[referentsseosed]
+    G5[duplikaatide kontroll]
 
-    G --> H 
-
-    H --> H1
-    H --> H2
-    H --> H3
-    H --> H4
-    H --> H5
+    G --> F 
+    G1 --> G
+    G2 --> G
+    G3 --> G
+    G4 --> G
+    G5 --> G
 
     %% =========================
     %% ANALÜÜTIKA / VISUAALID
     %% =========================
-    I[ANALÜÜTIKA]
-    I1[KPI 1<br/>kroonilise valu või liigesevalu diagnoosiga patsientide arv piirkonniti]
-    I2[KPI 2<br/>vihmastel päevadel kroonilise valu või liigesevalu diagnoosiga patsientide arv piirkonniti]
-    I3[KPI 3<br/>vihmaste päevade osakaal piirkonniti]
-    I4[Lisavisuaal<br/>enimlevinud diagnoosid piirkonniti]
+    H[ANALÜÜTIKA]
+    H1[Valuga seotud haiguste esinemissagedus 1000 patsiendi kohta Massachusettsi ja California piirkondades]
+    H2[Vihmaste päevade osakaal Massachusettsi ja California piirkondades]
+    H3[Valuga seotud haiguste progresseerumine kombineeritud ilmastikutüüpide lõikes //külm ja rõske / soe ja vihmane / järsk õhurõhu langus / stabiilne kuiv ilm//]
 
-    G1 --> I
-    G2 --> I
-    G3 --> I
-    G4 --> I
-    G5 --> I
-    G6 --> I
-
-    I --> I1
-    I --> I2
-    I --> I3
-    I --> I4
+    H --> H1
+    H --> H2
+    H --> H3

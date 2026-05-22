@@ -2,14 +2,15 @@
 
 ## Mis on valmis
 
-- [ ] Docker Compose käivitab kõik teenused
+-  [arhitektuur.md](/docs/arhitektuur.md) failis on kirjeldatud andmevoo diagramm, andmeallikad, täheskeemi realisatsioon ning faktitabelite granulaarsus
+- [readme.md](/README.md) failis on kirjeldatud projektitöö äriküsimus, mõõdikud ehk tulevased visuaalid, andmeallikad, projekti struktuur, panustatav meeskond 
+-  [ ] Docker kompose käivitab kõik teenused
 - [ ] Andmeid saadakse allikast kätte
 - [ ] Andmed laetakse `staging` kihti
 - [ ] Vähemalt üks transformatsioon toimib
 - [ ] Vähemalt üks näidikulaud on nähtaval
 - [ ] Vähemalt üks andmekvaliteedi test läbib
 
-[Täpsusta lühidalt, mis täpselt valmis on]
 
 ## Järgmised sammud
 

@@ -1,0 +1,26 @@
+%% Andmeallikad
+
+graph LR
+    subgraph Andmeallikad
+        A[Synthea andmestik] 
+        B[SNOMED CT - ICD-10 maping]
+        C[Ilmaandmete API]
+    end
+
+    subgraph Toorkiht
+        D[(PATIENT)]
+        E[(ENCOUNTER)]
+        F[(LOCATION)]
+        G[(ICD-10)]
+        H[(WEATHER)]
+        I[(CONDITION)]
+    end
+
+    A --> D
+    A --> E
+    A --> F
+    A --> I
+    
+    B --> G
+
+    C --> H
