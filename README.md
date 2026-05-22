@@ -24,8 +24,14 @@ Projekti eesmärk on uurida, kuidas jaotuvad valuga seotud diagnoosid piirkonnit
 
 **Mõõdikud**
 1. Valuga seotud haiguste esinemissagedus 1000 patsiendi kohta Massachusettsi ja California piirkondades. 
+   **Arvutuvalem:** (valuga seotud haigussündmusega patsientide arv piirkonnas/ kõigi patsientide arv piirkonnas)/1000
 2. Vihmaste päevade osakaal piirkonniti (%)
+    **Arvutusvalem:** (valuga seotud haigussündmusega patsientide arv antud ilmastikutüübis/ kõigi patsientide arv antud ilmastikutüübis)/100
 3. Valuga seotud haiguste progresseerumine kombineeritud ilmastikutüüpide lõikes (külm ja rõske / soe ja vihmane / järsk õhurõhu langus / stabiilne kuiv ilm)
+    **Arvutusvalem:** 1. valuga seotud haigussündmuse päevad vihmases ilmastikutüübis
+                    2.  Esinemissageduse arvutus 1000* punkt 1 tulem / kõigi patsientide arvuga
+                    3. lisada piirkonna mõõtmed, eristades Massachusetts ja California
+                    4. lisada kliinilise haigussündmuse mõõde, kus valuga seotud haigussündmused on klassifitseeritud korduvana
 
 ### Andmeallikad
 1. Ilmastikuandmete API
