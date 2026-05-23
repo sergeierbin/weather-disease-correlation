@@ -392,73 +392,139 @@ GROUP BY state_name
 - California: 50 patsienti 1000-st
 - Massachusetts: 103 patsienti 1000-st
 
-### Vihmaste päevade osakaal osariigi järgi
+### Valuga seotud haiguste levimus ilmastikutüübi järgi
 
-**Äriküsimus:** vihmaste päevade osakaal Massachusettsi ja California piirkondades
+**Äriküsimus:** kui suur osakaal patsientidest on valuga seotud haigustega erinevates ilmastikutingimustes osariigi lõikes
+
+**Valem:** (valuga seotud haigustega patsientide arv / kõigi patsientide arv osariigis) × 100
 
 **Tüüp:** Bar Chart
 
-**Allikas:** Virtual Dataset (`rainy_days_by_state`)
+**Allikas:** Virtual Dataset (`conditions_pct_by_weather_type`)
+
+**Seadistus:** X-telg: `weather_label`, Metriku: `MAX(pct)`, Dimensioon: `state_name`
 
 ```sql
+WITH weather_labels AS (
+    SELECT
+        weather_category_key,
+        CASE combined_weather_type
+            WHEN 'kuiv-külm-normaalne'   THEN 'Stabiilne kuiv ilm'
+            WHEN 'kuiv-külm-kõrge'       THEN 'Stabiilne kuiv ilm'
+            WHEN 'kuiv-jahe-normaalne'   THEN 'Stabiilne kuiv ilm'
+            WHEN 'kuiv-jahe-kõrge'       THEN 'Stabiilne kuiv ilm'
+            WHEN 'kuiv-soe-normaalne'    THEN 'Stabiilne kuiv ilm'
+            WHEN 'kuiv-soe-kõrge'        THEN 'Stabiilne kuiv ilm'
+            WHEN 'kuiv-kuum-normaalne'   THEN 'Stabiilne kuiv ilm'
+            WHEN 'kuiv-kuum-kõrge'       THEN 'Stabiilne kuiv ilm'
+            WHEN 'vihm-soe-normaalne'    THEN 'Soe ja vihmane'
+            WHEN 'vihm-soe-kõrge'        THEN 'Soe ja vihmane'
+            ELSE 'Muu'
+        END AS weather_label
+    FROM raw_marts.dim_weather_category
+),
+total_patients AS (
+    SELECT
+        CASE state WHEN 'CA' THEN 'California' WHEN 'MA' THEN 'Massachusetts' ELSE state END AS state_name,
+        COUNT(DISTINCT patient_id) AS total
+    FROM raw_marts.dim_patients
+    GROUP BY state_name
+),
+condition_patients AS (
+    SELECT
+        wl.weather_label,
+        CASE p.state WHEN 'CA' THEN 'California' WHEN 'MA' THEN 'Massachusetts' ELSE p.state END AS state_name,
+        COUNT(DISTINCT fwr.patient_id) AS condition_patients
+    FROM raw_marts.fct_patient_weather_region fwr
+    JOIN weather_labels wl ON wl.weather_category_key = fwr.weather_category_key
+    JOIN raw_marts.dim_patients p ON p.patient_id = fwr.patient_id
+    GROUP BY wl.weather_label, state_name
+)
 SELECT
-    CASE
-        WHEN r.state_name = 'CA' THEN 'California'
-        WHEN r.state_name = 'MA' THEN 'Massachusetts'
-        ELSE r.state_name
-    END AS state,
-    COUNT(*)                                                          AS total_days,
-    SUM(CASE WHEN w.rainy_day_flag THEN 1 ELSE 0 END)                AS rainy_days,
-    ROUND(
-        SUM(CASE WHEN w.rainy_day_flag THEN 1 ELSE 0 END)::numeric
-        / NULLIF(COUNT(*), 0) * 100, 1
-    )                                                                 AS rainy_day_pct
-FROM raw_marts.fct_weather_region_day w
-JOIN raw_marts.dim_region r ON r.region_key = w.region_key
-GROUP BY r.state_name
+    c.weather_label,
+    c.state_name,
+    c.condition_patients,
+    t.total AS total_patients,
+    ROUND(c.condition_patients::numeric / NULLIF(t.total, 0) * 100, 1) AS pct
+FROM condition_patients c
+JOIN total_patients t ON t.state_name = c.state_name
+ORDER BY c.weather_label, c.state_name
 ```
-
-**Tulemus (praeguse valimiga):**
-- California: ~50% vihmaste päevade osakaal
-- Massachusetts: ~42% vihmaste päevade osakaal
 
 ### Haigussündmused ilmastikutüübi järgi
 
-**Äriküsimus:** valuga seotud haiguste progresseerumine kombineeritud ilmastikutüüpide lõikes
+**Äriküsimus:** haigussündmuste sagedus 1000 patsiendi kohta ilmastikutüübi, osariigi ja korduvuse lõikes
 
-**Tüüp:** Bar Chart (sorditud kahanevalt haigussündmuste arvu järgi)
+**Valem:** (sündmuste arv / kõigi patsientide arv osariigis) × 1000
 
-**Allikas:** Virtual Dataset (`conditions_by_weather`)
+**Tüüp:** Bar Chart
+
+**Allikas:** Virtual Dataset (`conditions_by_weather_type`)
+
+**Seadistus:** X-telg: `weather_label`, Metriku: `MAX(events_per_1000)`, Dimensioonid: `state_name`, `recurrence_type`
 
 ```sql
+WITH weather_labels AS (
+    SELECT
+        weather_category_key,
+        CASE combined_weather_type
+            WHEN 'kuiv-külm-normaalne'   THEN 'Stabiilne kuiv ilm'
+            WHEN 'kuiv-külm-kõrge'       THEN 'Stabiilne kuiv ilm'
+            WHEN 'kuiv-jahe-normaalne'   THEN 'Stabiilne kuiv ilm'
+            WHEN 'kuiv-jahe-kõrge'       THEN 'Stabiilne kuiv ilm'
+            WHEN 'kuiv-soe-normaalne'    THEN 'Stabiilne kuiv ilm'
+            WHEN 'kuiv-soe-kõrge'        THEN 'Stabiilne kuiv ilm'
+            WHEN 'kuiv-kuum-normaalne'   THEN 'Stabiilne kuiv ilm'
+            WHEN 'kuiv-kuum-kõrge'       THEN 'Stabiilne kuiv ilm'
+            WHEN 'vihm-soe-normaalne'    THEN 'Soe ja vihmane'
+            WHEN 'vihm-soe-kõrge'        THEN 'Soe ja vihmane'
+            ELSE 'Muu'
+        END AS weather_label
+    FROM raw_marts.dim_weather_category
+),
+recurrence AS (
+    SELECT
+        patient_weather_key,
+        patient_id,
+        snomed_code,
+        weather_category_key,
+        CASE
+            WHEN COUNT(*) OVER (PARTITION BY patient_id, snomed_code) > 1 THEN 'Korduv'
+            ELSE 'Esmakordne'
+        END AS recurrence_type
+    FROM raw_marts.fct_patient_weather_region
+),
+total_patients AS (
+    SELECT
+        CASE state WHEN 'CA' THEN 'California' WHEN 'MA' THEN 'Massachusetts' ELSE state END AS state_name,
+        COUNT(DISTINCT patient_id) AS total
+    FROM raw_marts.dim_patients
+    GROUP BY state_name
+),
+events AS (
+    SELECT
+        wl.weather_label,
+        CASE p.state WHEN 'CA' THEN 'California' WHEN 'MA' THEN 'Massachusetts' ELSE p.state END AS state_name,
+        r.recurrence_type,
+        COUNT(r.patient_weather_key) AS event_count
+    FROM recurrence r
+    JOIN weather_labels wl ON wl.weather_category_key = r.weather_category_key
+    JOIN raw_marts.dim_patients p ON p.patient_id = r.patient_id
+    GROUP BY wl.weather_label, state_name, r.recurrence_type
+)
 SELECT
-    COALESCE(wc.combined_weather_type, 'Teadmata') AS weather_type,
-    CASE wc.combined_weather_type
-        WHEN 'kuiv-külm-normaalne'   THEN 'Stabiilne kuiv ilm'
-        WHEN 'kuiv-külm-kõrge'       THEN 'Stabiilne kuiv ilm'
-        WHEN 'kuiv-jahe-normaalne'   THEN 'Stabiilne kuiv ilm'
-        WHEN 'kuiv-jahe-kõrge'       THEN 'Stabiilne kuiv ilm'
-        WHEN 'kuiv-soe-normaalne'    THEN 'Stabiilne kuiv ilm'
-        WHEN 'kuiv-soe-kõrge'        THEN 'Stabiilne kuiv ilm'
-        WHEN 'kuiv-kuum-normaalne'   THEN 'Stabiilne kuiv ilm'
-        WHEN 'kuiv-kuum-kõrge'       THEN 'Stabiilne kuiv ilm'
-        WHEN 'vihm-soe-normaalne'    THEN 'Soe ja vihmane'
-        WHEN 'vihm-soe-kõrge'        THEN 'Soe ja vihmane'
-        ELSE 'Muu'
-    END AS weather_label,
-    COUNT(*) AS condition_count
-FROM raw_marts.fct_patient_weather_region fwr
-LEFT JOIN raw_marts.dim_weather_category wc ON wc.weather_category_key = fwr.weather_category_key
-GROUP BY weather_type, weather_label
-ORDER BY condition_count DESC
+    e.weather_label,
+    e.state_name,
+    e.recurrence_type,
+    e.event_count,
+    t.total AS total_patients,
+    ROUND(1000.0 * e.event_count / NULLIF(t.total, 0), 1) AS events_per_1000
+FROM events e
+JOIN total_patients t ON t.state_name = e.state_name
+ORDER BY e.weather_label, e.state_name, e.recurrence_type
 ```
 
-**Märkus:** "Järsk õhurõhu langus" kategooriat pole võimalik arvutada, kuna ilmaandmetes on ühe päeva absoluutväärtus — rõhu muutuse arvutamiseks oleks vaja eelmise päeva väärtust, mida praegune mudel ei salvesta.
-
-**Tulemus (praeguse valimiga):**
-- Stabiilne kuiv ilm: 9 sündmust
-- Muu: 7 sündmust
-- Soe ja vihmane: 4 sündmust
+**Märkus:** `recurrence_type` klassifitseerib iga sündmuse — `Esmakordne` kui patsient esineb ühe diagnoosiga ainult üks kord, `Korduv` kui sama patsient-diagnoos kombinatsioon esineb rohkem kui üks kord.
 
 ---
 
