@@ -556,8 +556,7 @@ ORDER BY e.weather_label, e.state_name, e.recurrence_type
 
 **Erisus:** Kategooria "Järsk õhurõhu langus" puudub. Praegune andmemudel salvestab ainult ühe päeva absoluutse õhurõhu väärtuse — rõhu muutuse (languse) arvutamiseks oleks vaja eelmise päeva väärtust, mida mudel ei salvesta.
 
-**Küsimus:** Kas "Järsk õhurõhu langus" kategooria on analüüsi jaoks oluline? Kui jah, tuleb andmemudelisse lisada eelmise päeva rõhu veerg (nt `lag(pres) OVER (PARTITION BY lat, lon ORDER BY date)`).
-
+**Küsimus:** Kas "Järsk õhurõhu langus" kategooria on analüüsi jaoks oluline?
 ---
 
 ## Dashboard
