@@ -358,7 +358,9 @@ Seedid on määratud `.env` failis ja `docker-compose.yml` kasutab neid eraldi k
 
 ### Haigussündmused 1000 patsiendi kohta osariigi järgi
 
-**Äriküsimus:** haigussündmuste esinemissagedus 1000 patsiendi kohta Massachusetts ja California piirkondades
+**Äriküsimus:** valuga seotud haiguste levimus 1000 patsiendi kohta Massachusettsi ja California piirkondades
+
+**Valem:** (vähemalt ühe valuga seotud diagnoosiga patsientide arv / kõigi patsientide arv) × 1000
 
 **Tüüp:** Bar Chart
 
@@ -376,9 +378,9 @@ WITH patients AS (
 )
 SELECT
     state_name AS state,
-    COUNT(fwr.patient_weather_key)                                AS condition_count,
+    COUNT(DISTINCT fwr.patient_id)                                AS condition_patients,
     COUNT(DISTINCT p.patient_id)                                  AS patient_count,
-    COUNT(fwr.patient_weather_key)::float
+    COUNT(DISTINCT fwr.patient_id)::float
         / NULLIF(COUNT(DISTINCT p.patient_id), 0) * 1000         AS conditions_per_1000
 FROM patients p
 LEFT JOIN raw_marts.fct_patient_weather_region fwr
@@ -387,8 +389,8 @@ GROUP BY state_name
 ```
 
 **Tulemus (praeguse valimiga):**
-- California: 68.4 haigussündmust 1000 patsiendi kohta (8 sündmust / 117 patsienti)
-- Massachusetts: 106.2 haigussündmust 1000 patsiendi kohta (12 sündmust / 113 patsienti)
+- California: 50 patsienti 1000-st
+- Massachusetts: 103 patsienti 1000-st
 
 ### Vihmaste päevade osakaal osariigi järgi
 
