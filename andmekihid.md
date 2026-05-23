@@ -392,6 +392,14 @@ GROUP BY state_name
 - California: 50 patsienti 1000-st
 - Massachusetts: 103 patsienti 1000-st
 
+**Algne nõue:**
+> Valuga seotud haiguste esinemissagedus 1000 patsiendi kohta Massachusettsi ja California piirkondades.
+> Arvutusvalem: (valuga seotud haigussündmusega patsientide arv piirkonnas / kõigi patsientide arv piirkonnas) / 1000
+
+**Erisus:** Nõudes on valemis `/1000`, kuid epidemioloogiliselt korrektne on `×1000` — muidu tulemus oleks 0,05 (CA) ja 0,103 (MA), mis on mõttetult väike arv. Teostus kasutab `×1000`.
+
+**Küsimus analüütikule:** Kas valemis on kirjaviga (`/1000` asemel `×1000`)?
+
 ### Valuga seotud haiguste levimus ilmastikutüübi järgi
 
 **Äriküsimus:** kui suur osakaal patsientidest on valuga seotud haigustega erinevates ilmastikutingimustes osariigi lõikes
@@ -450,6 +458,18 @@ FROM condition_patients c
 JOIN total_patients t ON t.state_name = c.state_name
 ORDER BY c.weather_label, c.state_name
 ```
+
+**Algne nõue:**
+> Vihmaste päevade osakaal piirkonniti (%)
+> Arvutusvalem: (valuga seotud haigussündmusega patsientide arv antud ilmastikutüübis / kõigi patsientide arv antud ilmastikutüübis) / 100
+
+**Erisused:**
+1. **Pealkiri:** Nõudes "Vihmaste päevade osakaal" — kuid valem mõõdab *patsientide osakaalu*, mitte *päevade osakaalu*. Need on erinevad mõõdikud. Teostus kasutab pealkirja "Valuga seotud haiguste levimus ilmastikutüübi järgi".
+2. **Valem:** Nõudes `/100`, kuid protsendi saamiseks peab kasutama `×100`. Kui jagada 100-ga, saaks tulemuseks 0,026, mitte 2,6%. Teostus kasutab `×100`.
+
+**Küsimused analüütikule:**
+- Kas graafiku pealkiri peaks olema "Vihmaste päevade osakaal" (nagu nõudes) või "Valuga seotud haiguste levimus ilmastikutüübi järgi" (nagu teostatud)? Algne pealkiri ei vasta valemile.
+- Kas valemis on kirjaviga (`/100` asemel `×100`)?
 
 ### Haigussündmused ilmastikutüübi järgi
 
@@ -525,40 +545,6 @@ ORDER BY e.weather_label, e.state_name, e.recurrence_type
 ```
 
 **Märkus:** `recurrence_type` klassifitseerib iga sündmuse — `Esmakordne` kui patsient esineb ühe diagnoosiga ainult üks kord, `Korduv` kui sama patsient-diagnoos kombinatsioon esineb rohkem kui üks kord.
-
----
-
-## Nõuded, erisused ja küsimused analüütikule
-
-### Graafik 1 — Haigussündmused 1000 patsiendi kohta osariigi järgi
-
-**Algne nõue:**
-> Valuga seotud haiguste esinemissagedus 1000 patsiendi kohta Massachusettsi ja California piirkondades.
-> Arvutusvalem: (valuga seotud haigussündmusega patsientide arv piirkonnas / kõigi patsientide arv piirkonnas) / 1000
-
-**Erisus:** Nõudes on valemis `/1000`, kuid epidemioloogiliselt korrektne on `×1000` — muidu tulemus oleks 0,05 (CA) ja 0,103 (MA), mis on mõttetult väike arv. Teostus kasutab `×1000`.
-
-**Küsimus analüütikule:** Kas valemis on kirjaviga (`/1000` asemel `×1000`)?
-
----
-
-### Graafik 2 — Valuga seotud haiguste levimus ilmastikutüübi järgi
-
-**Algne nõue:**
-> Vihmaste päevade osakaal piirkonniti (%)
-> Arvutusvalem: (valuga seotud haigussündmusega patsientide arv antud ilmastikutüübis / kõigi patsientide arv antud ilmastikutüübis) / 100
-
-**Erisused:**
-1. **Pealkiri:** Nõudes "Vihmaste päevade osakaal" — kuid valem mõõdab *patsientide osakaalu*, mitte *päevade osakaalu*. Need on erinevad mõõdikud. Teostus kasutab pealkirja "Valuga seotud haiguste levimus ilmastikutüübi järgi".
-2. **Valem:** Nõudes `/100`, kuid protsendi saamiseks peab kasutama `×100`. Kui jagada 100-ga, saaks tulemuseks 0,026, mitte 2,6%. Teostus kasutab `×100`.
-
-**Küsimused analüütikule:**
-- Kas graafiku pealkiri peaks olema "Vihmaste päevade osakaal" (nagu nõudes) või "Valuga seotud haiguste levimus ilmastikutüübi järgi" (nagu teostatud)? Algne pealkiri ei vasta valemile.
-- Kas valemis on kirjaviga (`/100` asemel `×100`)?
-
----
-
-### Graafik 3 — Haigussündmused ilmastikutüübi järgi
 
 **Algne nõue:**
 > Valuga seotud haiguste progresseerumine kombineeritud ilmastikutüüpide lõikes (külm ja rõske / soe ja vihmane / järsk õhurõhu langus / stabiilne kuiv ilm)
