@@ -1,7 +1,3 @@
-# ── Project context files (not for version control) ─────────────────────────
-PROMPT.md
-PROGRESS.md
-
 # ── Secrets ──────────────────────────────────────────────────────────────────
 .env
 
