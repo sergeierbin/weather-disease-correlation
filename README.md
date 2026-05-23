@@ -91,47 +91,58 @@ etl_project/
 ├── .env                        # Päris credentials (ei lähe git'i)
 ├── .env.example                # Mall — täida ja kopeeri .env-iks
 ├── docker-compose.yml          # Kõik teenused: Postgres, Airflow, Superset, Synthea
-├── RUNBOOK.md                  # Käivitusjuhend algusest lõpuni
-├── PROGRESS.md                 # Sammude jälgimine
+├── runbook.md                  # Käivitusjuhend algusest lõpuni
+├── andmekihid.md               # Andmemudeli kirjeldus kihtide kaupa
+│
+├── docs/                       # Skeemid ja diagrammid
 │
 ├── postgres/
-│   └── init.sql                # Loob raw skeemi ja tabelid (patients, encounters,
-│                               # conditions, weather, icd_codes)
+│   └── init.sql                # Loob raw skeemi ja tabelid
 │
 ├── synthea/
 │   └── synthea-with-dependencies.jar   # Synthea käivitatav fail
-│   └── output/fhir/            # Genereeritud FHIR JSON failid (gitignore'd)
+│   └── output/                 # Genereeritud FHIR JSON failid (gitignore'd)
 │
 ├── ingestion/                  # Python skriptid andmete laadimiseks raw skeemi
+│   ├── icd_snomed.csv          # ICD-10 ↔ SNOMED koodide tabel (käsitsi koostatud)
 │   ├── fetch_synthea.py        # FHIR JSON → raw.patients / encounters / conditions
-│   ├── fetch_icd_codes.py      # WHO ICD-10 API → raw.icd_codes
-│   ├── fetch_weather.py        # Meteostat API → raw.weather
+│   ├── fetch_icd_codes.py      # icd_snomed.csv → raw.icd10_codes
+│   ├── fetch_weather.py        # Meteostat → raw.weather; Open-Meteo → raw.organization_locations
 │   └── utils/
 │       ├── __init__.py
-│       └── db.py               # PostgreSQL ühenduse abifunktsioonid
+│       ├── db.py               # PostgreSQL ühenduse abifunktsioonid
+│       └── codes.py            # Laadib TARGET_SNOMED_CODES icd_snomed.csv-st
 │
 ├── dbt/                        # Andmete transformatsioon raw → staging → marts
 │   ├── dbt_project.yml         # Projekti konfiguratsioon ja materaliseerimise reeglid
 │   ├── profiles.yml            # Ühenduse seaded PostgreSQL-iga
 │   └── models/
-│       ├── staging/            # Vaated (views) — puhastab raw andmed
-│       │   ├── _sources.yml    # Registreerib raw tabeli allikad dbt jaoks
+│       ├── staging/            # dbt vaated — puhastab ja nimetab raw andmed ümber
+│       │   ├── _sources.yml
+│       │   ├── _models.yml
 │       │   ├── stg_patients.sql
 │       │   ├── stg_encounters.sql
 │       │   ├── stg_conditions.sql
+│       │   ├── stg_organizations.sql
+│       │   ├── stg_organization_locations.sql
 │       │   ├── stg_weather.sql
 │       │   └── stg_icd_codes.sql
 │       │
-│       ├── intermediate/       # Vaated — ühendab tabeleid äriloogika jaoks
-│       │   ├── int_patient_conditions.sql   # Patsiendid + diagnoosid
-│       │   └── int_encounters_weather.sql   # Visiidid + ilm
-│       │
-│       └── marts/              # Tabelid — lõplik star schema analüüsiks
-│           ├── fct_encounters.sql    # Faktitabel (visiit × diagnoos)
-│           ├── dim_patients.sql      # Patsientide dimensioon
-│           ├── dim_dates.sql         # Kuupäevade dimensioon
-│           ├── dim_conditions.sql    # Diagnooside dimensioon
-│           └── dim_weather.sql       # Ilmaandmete dimensioon
+│       └── marts/              # dbt tabelid — lõplik star schema analüüsiks
+│           ├── _models.yml
+│           ├── dim_patients.sql
+│           ├── dim_diagnosis.sql
+│           ├── dim_date.sql
+│           ├── dim_region.sql
+│           ├── dim_weather_category.sql
+│           ├── fct_patient_day.sql
+│           ├── fct_patient_weather_region.sql
+│           └── fct_weather_region_day.sql
+│
+├── superset/
+│   ├── init_superset.sh        # Seadistab Superseti ja impordib dashboardi
+│   └── dashboards/
+│       └── dashboard_export.zip
 │
 └── airflow/
     └── dags/
