@@ -1,0 +1,25 @@
+icd10_code;description_et;snomed_code
+M05.9;Seropositiivne reumatoidartriit (täpsustamata);239791005
+M06.9;Reumatoidartriit (täpsustamata);69896004
+M10;Podagra (Gout);90560007
+M13.9;Artriit (täpsustamata);3723001
+M15;Polüartroos;201834006
+M16;Puusaliigese artroos (Coxarthrosis);396275006
+M16;Puusaliigese artroos (Coxarthrosis);313420000
+M17;Põlveliigese artroos (Gonarthrosis);239873007
+M19.9;Artroos (täpsustamata);396275006
+M25.5;Liigesevalu (Arthralgia);57676002
+M25.50;Liigesevalu (täpsustamata);57676002
+M25.51;Ülaliigese valu;45326000
+M25.56;Põlveliigese valu;30989003
+M45;Anküloseeriv spondüliit;9631008
+M47;Spondüloos;64217002
+M48;Muud spondülopaatiad;449683001
+M50;Kaelalülide ketta haigused;81817003
+M51;Muud lülidevaheliste ketaste haigused;64217002
+M54;Dorsalgia (Seljavalu);161891005
+M54.5;Alaseljavalu (Low back pain);279039007
+M62;Muud lihaste häired;26544005
+M79;Pehmete kudede muud haigused;22253000
+M79.1;Müalgia (Lihasvalu);68962001
+M79.7;Fibromüalgia;24693007

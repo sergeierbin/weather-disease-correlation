@@ -1,8 +1,3 @@
--- Staging model for diagnosed conditions.
--- Changes from raw:
---   - loaded_at removed (internal ingestion metadata)
---   - is_chronic added: True if the condition has no end date (still ongoing)
-
 WITH source AS (
     SELECT * FROM {{ source('raw', 'conditions') }}
 ),
@@ -20,11 +15,7 @@ renamed AS (
         condition_display,
         onset_datetime,
         recorded_date,
-        abatement_datetime,
-
-        -- A condition is considered chronic if it has never been resolved (no abatement date)
-        abatement_datetime IS NULL                      AS is_chronic
-
+        abatement_datetime
     FROM source
 )
 

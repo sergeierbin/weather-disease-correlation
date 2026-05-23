@@ -7,9 +7,9 @@ ETL pipeline DAG — orchestrates the full data flow:
                     ────────────────────┘
 
 Steps:
-  1. fetch_synthea   — parse FHIR JSON bundles → raw.patients / encounters / conditions
-  2. fetch_icd_codes — pull WHO ICD-10 API     → raw.icd_codes         (runs in parallel with step 1)
-  3. fetch_weather   — pull Meteostat API       → raw.weather           (needs patient coords from step 1)
+  1. fetch_synthea   — parse FHIR JSON bundles → raw.patients / encounters / organizations / conditions
+  2. fetch_icd_codes — load icd_snomed.csv       → raw.icd10_codes         (runs in parallel with step 1)
+  3. fetch_weather   — geocode (Open-Meteo) + weather (Meteostat) → raw.organization_locations / raw.weather
   4. dbt_run         — run all dbt models       → staging / intermediate / marts
 """
 
@@ -52,18 +52,18 @@ with DAG(
         bash_command="python /opt/airflow/ingestion/fetch_synthea.py",
     )
 
-    # ── Step 2: ingest WHO ICD-10 codes ──────────────────────────────────────
-    # Authenticates with the WHO ICD-10 API (OAuth2) and BFS-crawls all codes
-    # into raw.icd_codes. Runs in parallel with ingest_synthea — no shared state.
+    # ── Step 2: ingest ICD-10 / SNOMED mapping ───────────────────────────────
+    # Loads ingestion/icd_snomed.csv into raw.icd10_codes.
+    # Runs in parallel with ingest_synthea — no shared state.
     ingest_icd_codes = BashOperator(
         task_id="ingest_icd_codes",
         bash_command="python /opt/airflow/ingestion/fetch_icd_codes.py",
     )
 
-    # ── Step 3: ingest Meteostat weather ─────────────────────────────────────
-    # Groups patient home coordinates (rounded to 4 dp) from raw.encounters
-    # and fetches daily weather for each location × date range via Meteostat.
-    # Must run after ingest_synthea so patient coordinates are available.
+    # ── Step 3: ingest weather ───────────────────────────────────────────────
+    # Geocodes each organisation (Open-Meteo) → raw.organization_locations,
+    # then fetches daily historical weather (Meteostat) → raw.weather.
+    # Must run after ingest_synthea so encounters and organisations are available.
     ingest_weather = BashOperator(
         task_id="ingest_weather",
         bash_command="python /opt/airflow/ingestion/fetch_weather.py",
@@ -73,19 +73,19 @@ with DAG(
     # Executes the full dbt lineage:
     #   raw → staging (views) → intermediate (views) → marts (tables)
     # Must run after all ingestion tasks so the raw schema is fully populated.
-    # chmod ensures dbt can write logs/ and target/ inside the mounted volume.
     dbt_run = BashOperator(
         task_id="dbt_run",
         bash_command=(
-            "chmod -R 777 /opt/airflow/dbt && "
             "/home/airflow/.local/bin/dbt run "
             "--project-dir /opt/airflow/dbt "
-            "--profiles-dir /opt/airflow/dbt"
+            "--profiles-dir /opt/airflow/dbt "
+            "--log-path /tmp/dbt_logs "
+            "--target-path /tmp/dbt_target"
         ),
     )
 
     # ── Task dependencies ─────────────────────────────────────────────────────
-    # synthea must finish before weather (weather needs patient coords)
+    # synthea must finish before weather (weather needs encounter + org data)
     ingest_synthea >> ingest_weather
 
     # both weather and icd must finish before dbt (dbt reads all raw tables)

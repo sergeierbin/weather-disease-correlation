@@ -1,17 +1,12 @@
--- Staging model for WHO ICD-10 disease classification codes.
--- Changes from raw:
---   - loaded_at removed (internal ingestion metadata)
-
 WITH source AS (
-    SELECT * FROM {{ source('raw', 'icd_codes') }}
+    SELECT * FROM {{ source('raw', 'icd10_codes') }}
 ),
 
 renamed AS (
     SELECT
-        code,
-        title,
-        description,
-        parent_code
+        icd10_code,
+        description_et,
+        snomed_code
     FROM source
 )
 

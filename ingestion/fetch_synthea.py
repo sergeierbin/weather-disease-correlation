@@ -1,7 +1,8 @@
-# Parses Synthea FHIR R4 JSON bundles and loads three resource types into PostgreSQL:
-#   Patient   → raw.patients
-#   Encounter → raw.encounters
-#   Condition → raw.conditions
+# Parses Synthea FHIR R4 JSON bundles and loads four resource types into PostgreSQL:
+#   Patient      → raw.patients
+#   Encounter    → raw.encounters
+#   Organization → raw.organizations
+#   Condition    → raw.conditions
 #
 # Input:  FHIR_DIR (env var or default ./synthea/output/fhir) — one JSON file per patient
 # Output: upserted rows in the raw schema (safe to re-run; duplicates are skipped)
@@ -15,6 +16,7 @@ from pathlib import Path
 # Allow imports from the ingestion/ package root (e.g. utils.db)
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from utils.db import get_connection, execute_values
+from utils.codes import TARGET_SNOMED_CODES
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
@@ -22,14 +24,19 @@ log = logging.getLogger(__name__)
 # Directory containing Synthea FHIR bundles — override with FHIR_DIR env var
 FHIR_DIR = Path(os.environ.get("FHIR_DIR", "/opt/airflow/synthea_output/fhir"))
 
+
 # ── FHIR helpers ──────────────────────────────────────────────────────────────
 
 def strip_urn(reference):
-    # FHIR cross-references are formatted as "urn:uuid:abc-123" — strip the prefix
-    # to get a plain UUID that matches the id field in the target table
     if not reference:
         return None
-    return reference.replace("urn:uuid:", "")
+    # Standard FHIR URN: "urn:uuid:abc-123"
+    if reference.startswith("urn:uuid:"):
+        return reference[len("urn:uuid:"):]
+    # Synthea conditional reference: "Organization?identifier=...synthea|<uuid>"
+    if "|" in reference:
+        return reference.split("|")[-1]
+    return reference
 
 
 def first(lst, default=None):
@@ -96,6 +103,21 @@ def parse_encounter(r):
         r.get("serviceProvider", {}).get("display"),          # Organisation name
         coding_value(reason, "code"),                         # SNOMED reason code
         coding_value(reason, "display"),                      # Human-readable reason
+        strip_urn(r.get("serviceProvider", {}).get("reference")),  # organization_id FK
+    )
+
+
+def parse_organization(r):
+    address  = first(r.get("address", []), {})
+    org_type = first(r.get("type", []), {})
+
+    return (
+        r["id"],
+        r.get("name"),
+        address.get("city"),
+        address.get("state"),
+        coding_value(org_type, "code"),
+        coding_value(org_type, "display"),
     )
 
 
@@ -124,9 +146,10 @@ def parse_bundle(path):
     with open(path, encoding="utf-8") as f:
         bundle = json.load(f)
 
-    patients   = []
-    encounters = []
-    conditions = []
+    patients      = []
+    encounters    = []
+    organizations = []
+    conditions    = []
 
     for entry in bundle.get("entry", []):
         r     = entry.get("resource", {})
@@ -136,11 +159,19 @@ def parse_bundle(path):
         if rtype == "Patient":
             patients.append(parse_patient(r))
         elif rtype == "Encounter":
-            encounters.append(parse_encounter(r))
+            row = parse_encounter(r)
+            reason_code = row[11]  # reason_code is the 12th field in parse_encounter
+            if reason_code in TARGET_SNOMED_CODES:
+                encounters.append(row)
+        elif rtype == "Organization":
+            organizations.append(parse_organization(r))
         elif rtype == "Condition":
-            conditions.append(parse_condition(r))
+            row = parse_condition(r)
+            condition_code = row[6]  # condition_code is the 7th field in parse_condition
+            if condition_code in TARGET_SNOMED_CODES:
+                conditions.append(row)
 
-    return patients, encounters, conditions
+    return patients, encounters, organizations, conditions
 
 # ── SQL statements ────────────────────────────────────────────────────────────
 
@@ -156,9 +187,17 @@ ENCOUNTERS_SQL = """
     INSERT INTO raw.encounters
         (encounter_id, status, class_code, type_code, type_display,
          patient_id, period_start, period_end, practitioner_display,
-         location_display, service_provider_display, reason_code, reason_display)
+         location_display, service_provider_display, reason_code, reason_display,
+         organization_id)
     VALUES %s
     ON CONFLICT (encounter_id) DO NOTHING
+"""
+
+ORGANIZATIONS_SQL = """
+    INSERT INTO raw.organizations
+        (id, name, city, state, type_code, type_display)
+    VALUES %s
+    ON CONFLICT (id) DO NOTHING
 """
 
 CONDITIONS_SQL = """
@@ -180,37 +219,57 @@ def main():
 
     log.info("Found %d FHIR bundle files in %s", len(files), FHIR_DIR)
 
-    all_patients   = []
-    all_encounters = []
-    all_conditions = []
+    all_patients      = []
+    all_encounters    = []
+    all_organizations = []
+    all_conditions    = []
 
     for path in files:
-        # Skip hospital and practitioner info bundles — they contain no Patient resources
-        if path.stem.startswith(("hospitalInformation", "practitionerInformation")):
-            continue
         try:
-            p, e, c = parse_bundle(path)
-            all_patients.extend(p)
-            all_encounters.extend(e)
-            all_conditions.extend(c)
+            if path.stem.startswith("hospitalInformation"):
+                # Hospital bundles contain Organization resources but no patients/encounters
+                _, _, o, _ = parse_bundle(path)
+                all_organizations.extend(o)
+            elif path.stem.startswith("practitionerInformation"):
+                continue
+            else:
+                p, e, o, c = parse_bundle(path)
+                all_patients.extend(p)
+                all_encounters.extend(e)
+                all_organizations.extend(o)
+                all_conditions.extend(c)
         except Exception as exc:
             log.warning("Skipping %s: %s", path.name, exc)
 
+    # Null out encounter_id on conditions that reference filtered-out encounters
+    kept_encounter_ids = {e[0] for e in all_encounters}
+    all_conditions = [
+        (c[0], c[1], c[2] if c[2] in kept_encounter_ids else None, *c[3:])
+        for c in all_conditions
+    ]
+
+    # Keep only organizations linked to a relevant encounter
+    kept_org_ids = {e[13] for e in all_encounters if e[13] is not None}
+    all_organizations = [o for o in all_organizations if o[0] in kept_org_ids]
+
     log.info(
-        "Parsed %d patients, %d encounters, %d conditions",
-        len(all_patients), len(all_encounters), len(all_conditions),
+        "Parsed %d patients, %d encounters, %d organizations, %d conditions",
+        len(all_patients), len(all_encounters), len(all_organizations), len(all_conditions),
     )
 
     conn = get_connection()
     try:
-        # Insert in FK dependency order: patients first, then encounters, then conditions
-        execute_values(conn, PATIENTS_SQL,   all_patients)
+        # Insert in FK dependency order: patients and organizations first, then encounters, then conditions
+        execute_values(conn, PATIENTS_SQL,      all_patients)
         log.info("Loaded %d rows → raw.patients", len(all_patients))
 
-        execute_values(conn, ENCOUNTERS_SQL, all_encounters)
+        execute_values(conn, ORGANIZATIONS_SQL, all_organizations)
+        log.info("Loaded %d rows → raw.organizations", len(all_organizations))
+
+        execute_values(conn, ENCOUNTERS_SQL,    all_encounters)
         log.info("Loaded %d rows → raw.encounters", len(all_encounters))
 
-        execute_values(conn, CONDITIONS_SQL, all_conditions)
+        execute_values(conn, CONDITIONS_SQL,    all_conditions)
         log.info("Loaded %d rows → raw.conditions", len(all_conditions))
     finally:
         conn.close()  # Always close, even if an insert raises

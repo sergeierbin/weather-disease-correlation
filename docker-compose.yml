@@ -25,25 +25,23 @@ x-airflow-common:
     AIRFLOW__WEBSERVER__WEB_SERVER_SESSION_LIFETIME: "28800"
     # Permanent session so cookie does not expire when browser is open
     AIRFLOW__WEBSERVER__SESSION_LIFETIME_DAYS: "1"
+    # Avoid session cookie conflict with Superset (both Flask apps default to "session")
+    AIRFLOW__WEBSERVER__SESSION_COOKIE_NAME: airflow_session
     # Extra Python packages installed at container startup.
     # For production, bake these into a custom Docker image instead.
     _PIP_ADDITIONAL_REQUIREMENTS: >-
       psycopg2-binary==2.9.9
-      numpy==1.26.4
-      pandas==2.1.4
-      meteostat==1.6.8
       requests==2.31.0
       dbt-core==1.8.6
       dbt-postgres==1.8.2
+      meteostat==1.6.8
     # Warehouse credentials forwarded to DAGs so they can write to PostgreSQL
     POSTGRES_HOST: postgres
     POSTGRES_PORT: "5432"
     POSTGRES_USER: ${POSTGRES_USER}
     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     POSTGRES_DB: ${POSTGRES_DB}
-    # WHO ICD-10 API credentials forwarded to the ingestion DAG
-    ICD_CLIENT_ID: ${ICD_CLIENT_ID}
-    ICD_CLIENT_SECRET: ${ICD_CLIENT_SECRET}
+
   volumes:
     - ./airflow/dags:/opt/airflow/dags          # DAG definitions
     - ./ingestion:/opt/airflow/ingestion         # Ingestion scripts called by DAGs
@@ -100,16 +98,9 @@ services:
           wget -q -O synthea-with-dependencies.jar \
             https://github.com/synthetichealth/synthea/releases/download/master-branch-latest/synthea-with-dependencies.jar
         fi
-        # Generate synthetic patients; population size comes from .env (default 100)
-        # Massachusetts specified to avoid Synthea's state validation error
-        java -jar synthea-with-dependencies.jar \
-          -p ${SYNTHEA_POPULATION:-100} \
-          Massachusetts \
-          --exporter.baseDirectory=/synthea/output \
-          --exporter.fhir.export=true \
-          --exporter.csv.export=false \
-          --exporter.ccda.export=false \
-          --exporter.cpcds.export=false
+        COMMON_OPTS="-p ${SYNTHEA_POPULATION:-100} --exporter.fhir.export=true --exporter.csv.export=false --exporter.ccda.export=false --exporter.cpcds.export=false"
+        java -jar synthea-with-dependencies.jar -s ${SYNTHEA_SEED:-12345} $$COMMON_OPTS ${SYNTHEA_STATE_1:-Maine} --exporter.baseDirectory=/synthea/output
+        java -jar synthea-with-dependencies.jar -s ${SYNTHEA_SEED_2:-12346} $$COMMON_OPTS ${SYNTHEA_STATE_2:-Hawaii} --exporter.baseDirectory=/synthea/output
 
   # ── Airflow one-time initialisation ─────────────────────────────────────────
   # Run once before starting the webserver and scheduler:
@@ -171,24 +162,17 @@ services:
       - tools  # Only active when --profile tools is passed
     environment:
       SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY}
+      SUPERSET_ADMIN_USERNAME: ${SUPERSET_ADMIN_USERNAME}
+      SUPERSET_ADMIN_PASSWORD: ${SUPERSET_ADMIN_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - superset_data:/app/superset_home
+      - ./superset:/app/superset_config  # Init script and dashboard ZIP
     depends_on:
       postgres:
         condition: service_healthy
     entrypoint: /bin/sh
-    command:
-      - -c
-      - |
-        # Migrate Superset's internal DB, create admin user, and load default roles
-        superset db upgrade &&
-        superset fab create-admin \
-          --username ${SUPERSET_ADMIN_USERNAME} \
-          --firstname Admin \
-          --lastname User \
-          --email admin@example.com \
-          --password ${SUPERSET_ADMIN_PASSWORD} &&
-        superset init
+    command: ["/app/superset_config/init_superset.sh"]
 
   # ── Superset 3.x ─────────────────────────────────────────────────────────────
   # Dashboard UI available at http://localhost:8088
