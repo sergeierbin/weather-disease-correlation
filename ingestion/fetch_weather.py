@@ -73,12 +73,19 @@ INSERT_SQL = """
 def geocode(city, state):
     state_name = STATE_NAMES.get(state, state)
     city_title = city.title()
-    resp = requests.get(
-        GEOCODE_URL,
-        params={"name": city_title, "count": 10, "language": "en", "format": "json"},
-        timeout=10,
-    )
-    resp.raise_for_status()
+    for attempt in range(3):
+        try:
+            resp = requests.get(
+                GEOCODE_URL,
+                params={"name": city_title, "count": 10, "language": "en", "format": "json"},
+                timeout=30,
+            )
+            resp.raise_for_status()
+            break
+        except requests.exceptions.Timeout:
+            if attempt == 2:
+                raise
+            log.warning("Geocoding timeout for %s, retrying (%d/3)...", city_title, attempt + 2)
     results = resp.json().get("results", [])
     if not results:
         log.warning("Geocoding found no results for %s, %s", city_title, state_name)
