@@ -398,7 +398,7 @@ GROUP BY state_name
 
 **Erisus:** Nõudes on valemis `/1000`, kuid epidemioloogiliselt korrektne on `×1000` — muidu tulemus oleks 0,05 (CA) ja 0,103 (MA), mis on mõttetult väike arv. Teostus kasutab `×1000`.
 
-**Küsimus analüütikule:** Kas valemis on kirjaviga (`/1000` asemel `×1000`)?
+**Küsimus:** Kas valemis on kirjaviga (`/1000` asemel `×1000`)?
 
 ### Valuga seotud haiguste levimus ilmastikutüübi järgi
 
@@ -467,7 +467,7 @@ ORDER BY c.weather_label, c.state_name
 1. **Pealkiri:** Nõudes "Vihmaste päevade osakaal" — kuid valem mõõdab *patsientide osakaalu*, mitte *päevade osakaalu*. Need on erinevad mõõdikud. Teostus kasutab pealkirja "Valuga seotud haiguste levimus ilmastikutüübi järgi".
 2. **Valem:** Nõudes `/100`, kuid protsendi saamiseks peab kasutama `×100`. Kui jagada 100-ga, saaks tulemuseks 0,026, mitte 2,6%. Teostus kasutab `×100`.
 
-**Küsimused analüütikule:**
+**Küsimused:**
 - Kas graafiku pealkiri peaks olema "Vihmaste päevade osakaal" (nagu nõudes) või "Valuga seotud haiguste levimus ilmastikutüübi järgi" (nagu teostatud)? Algne pealkiri ei vasta valemile.
 - Kas valemis on kirjaviga (`/100` asemel `×100`)?
 
@@ -556,7 +556,7 @@ ORDER BY e.weather_label, e.state_name, e.recurrence_type
 
 **Erisus:** Kategooria "Järsk õhurõhu langus" puudub. Praegune andmemudel salvestab ainult ühe päeva absoluutse õhurõhu väärtuse — rõhu muutuse (languse) arvutamiseks oleks vaja eelmise päeva väärtust, mida mudel ei salvesta.
 
-**Küsimus analüütikule:** Kas "Järsk õhurõhu langus" kategooria on analüüsi jaoks oluline? Kui jah, tuleb andmemudelisse lisada eelmise päeva rõhu veerg (nt `lag(pres) OVER (PARTITION BY lat, lon ORDER BY date)`).
+**Küsimus:** Kas "Järsk õhurõhu langus" kategooria on analüüsi jaoks oluline? Kui jah, tuleb andmemudelisse lisada eelmise päeva rõhu veerg (nt `lag(pres) OVER (PARTITION BY lat, lon ORDER BY date)`).
 
 ---
 
