@@ -23,9 +23,7 @@
 
 - **Salvestamine** — salvestame kõik patsiendid.
 
-- **FirstName, MiddleName, LastName** — kas neid välju on analüüsis vaja? Kuna tegemist on sünteetiliste andmetega, siis nimed ei pruugi analüütiliselt lisaväärtust anda. Kas jätta välja?
-- **Aadress** — kas täpne aadressirida on vajalik? Asukohaanalüüsiks piisab `city`, `state`, `lat` ja `lon` väljadest, mis meil juba olemas on. Kas täpne aadressirida on vajalik kui kasutame visiidiga seotud aadressi?
-- **deceased_datetime** — võiksime selle jätta, kuna see võimaldab edaspidi analüüsida suremusega seotud mustreid.
+- `id` - patsiendi ID
 
 ### Organization tabel
 
@@ -34,11 +32,10 @@
 Milliseid välju on vaja organisatsiooni ressursi kohta? Hetkel salvestame järgmised väljad:
 
 - `id`
-- `name` — organisatsiooni nimi
 - `city` — linn
 - `state` — osariik
-- `type_code` — tüübi kood (nt `prov`)
-- `type_display` — tüüp tekstina (nt `Healthcare Provider`)
+- `lat`	 - Latitude of Organization's address
+- `lon` - 	Longitude of Organization's address.
 
 ### Encounter tabel
 
@@ -47,16 +44,7 @@ Milliseid välju on vaja organisatsiooni ressursi kohta? Hetkel salvestame järg
 Milliseid välju on vaja encounter ressursi kohta? Hetkel salvestame järgmised väljad:
 
 - `encounter_id`
-- `status`
-- `class_code` — nt `AMB` (ambulatoorne)
-- `type_code` — SNOMED protseduurikood
-- `type_display` — visiidi tüüp tekstina
 - `patient_id`
-- `period_start` — visiidi algus
-- `period_end` — visiidi lõpp
-- `practitioner_display` — arsti nimi
-- `location_display` — kliiniku/haigla nimi
-- `service_provider_display` — organisatsiooni nimi tekstina
 - `reason_code` — SNOMED põhjuse kood
 - `reason_display` — põhjus tekstina
 - `organization_id`
@@ -70,14 +58,11 @@ Milliseid välju on vaja condition ressursi kohta? Hetkel salvestame järgmised 
 - `condition_id`
 - `patient_id`
 - `encounter_id` — nullable, mõned seisundid ei ole seotud konkreetse visiidiga
-- `clinical_status` — nt `active`, `resolved`
-- `verification_status` — nt `confirmed`
 - `category_code` — nt `encounter-diagnosis`
 - `condition_code` — SNOMED kood
 - `condition_code_system` — kodeerimissüsteemi URI
 - `condition_display` — haiguse nimi tekstina
 - `onset_datetime` — millal seisund algas
-- `recorded_date` — millal dokumenteeriti
 - `abatement_datetime` — millal lõppes (NULL kui jätkub)
 
 **Andmevoo skeem - kommentaarid:**

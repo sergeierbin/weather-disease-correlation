@@ -9,25 +9,17 @@ flowchart LR
     A1[patients]
     A2[conditions]
     A3[encounters]
-    A4[demograafilised andmed]
+    A4[organizations]
 
     B1[SNOMED CT - ICD-10 maping]
 
     C[Ilmavaatluse API]
-    C1[sademed]
-    C2[temperatuur]
-    C3[õhuniiskus]
-    C4[õhurõhk]
-
+   
     A --> A1
     A --> A2
     A --> A3
     A --> A4
 
-    C --> C1
-    C --> C2
-    C --> C3
-    C --> C4
 
     %% =========================
     %% TOORKIHT / PRONKS KIHT
@@ -39,10 +31,7 @@ flowchart LR
     A3 --> D
     A4 --> D
     B1 --> D
-    C1 --> D
-    C2 --> D
-    C3 --> D
-    C4 --> D
+    C --> D
 
     D1[raw_patients]
     D2[raw_conditions]
@@ -113,8 +102,8 @@ flowchart LR
     %% =========================
     H[ANALÜÜTIKA]
     H1[Valuga seotud haiguste esinemissagedus 1000 patsiendi kohta Massachusettsi ja California piirkondades]
-    H2[Vihmaste päevade osakaal Massachusettsi ja California piirkondades]
-    H3[Valuga seotud haiguste progresseerumine kombineeritud ilmastikutüüpide lõikes //külm ja rõske / soe ja vihmane / järsk õhurõhu langus / stabiilne kuiv ilm//]
+    H2[Valuga seotud haigustega patsientide osakaal ilmastikutüübi järgi //%]
+    H3[Korduvate valuga seotud diagnooside osakaal kombinatsioonis ilmastikutüübi ja rõhulangusega piirkonna lõikes]
 
     H --> H1
     H --> H2

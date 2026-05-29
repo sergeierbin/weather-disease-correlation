@@ -22,7 +22,7 @@ graph LR
         D[(PATIENT)]
         E[(ENCOUNTER)]
         F[(ORGANIZATION)]
-        G[(ICD-10)]
+        G[(SNOMED CT to ICD-10)]
         H[(WEATHER)]
         I[(CONDITION)]
     end
@@ -57,20 +57,12 @@ flowchart LR
     B1[SNOMED CT - ICD-10 maping]
 
     C[Ilmavaatluse API]
-    C1[sademed]
-    C2[temperatuur]
-    C3[õhuniiskus]
-    C4[õhurõhk]
-
+   
     A --> A1
     A --> A2
     A --> A3
     A --> A4
 
-    C --> C1
-    C --> C2
-    C --> C3
-    C --> C4
 
     %% =========================
     %% TOORKIHT / PRONKS KIHT
@@ -82,10 +74,7 @@ flowchart LR
     A3 --> D
     A4 --> D
     B1 --> D
-    C1 --> D
-    C2 --> D
-    C3 --> D
-    C4 --> D
+    C --> D
 
     D1[raw_patients]
     D2[raw_conditions]
@@ -156,8 +145,8 @@ flowchart LR
     %% =========================
     H[ANALÜÜTIKA]
     H1[Valuga seotud haiguste esinemissagedus 1000 patsiendi kohta Massachusettsi ja California piirkondades]
-    H2[Vihmaste päevade osakaal Massachusettsi ja California piirkondades]
-    H3[Valuga seotud haiguste progresseerumine kombineeritud ilmastikutüüpide lõikes //külm ja rõske / soe ja vihmane / järsk õhurõhu langus / stabiilne kuiv ilm//]
+    H2[Valuga seotud haigustega patsientide osakaal ilmastikutüübi järgi //%]
+    H3[Korduvate valuga seotud diagnooside osakaal kombinatsioonis ilmastikutüübi ja rõhulangusega piirkonna lõikes]
 
     H --> H1
     H --> H2
@@ -197,29 +186,18 @@ erDiagram
     %% =========================
     %% DIMENSIOONID
     %% =========================
+    DIM_PATIENT {
+        string patient_key PK
+        string source_patient_id
+    }
+
     DIM_REGION {
-        int region_key PK
-        string city_name
-        string state_name
+        string region_key PK
+        string city
+        string state
         float latitude
         float longitude
-    }
-
-    DIM_PATIENTS {
-        int Id PK
-        date birth_date
-        string gender
-        string FirstName
-        string MiddleName
-        string LastName
-        string Aadress
-    }
-
-    DIM_DIAGNOSIS {
-        int diagnosis_key PK
-        string snomed_code
-        string icd10_code
-        string diagnosis_name
+        string organization_id
     }
 
     DIM_DATE {
@@ -230,72 +208,82 @@ erDiagram
         int day
     }
 
-    DIM_WEATHER_CATEGORY{
-        int weather_category_key PK
+    DIM_DIAGNOSIS {
+        string diagnosis_key PK
+        string condition_code_snomed
+        string icd10_code
+        string diagnosis_name
+        string diagnosis_group
+        boolean pain_related_flag
+        boolean chronic_disease_flag
+    }
+
+    DIM_WEATHER_TYPE {
+        string weather_type_key PK
         boolean rain_flag
-        string temp_category
-        string humidity_category
-        string pressure_category
-        string combined_weather_type
+        boolean pressure_drop_flag
+        string weather_type
+        string temperature_band
     }
 
     %% =========================
     %% FAKTITABELID
     %% =========================
     FACT_WEATHER_REGION_DAY {
-        int weather_region_day_key PK
+        string weather_region_day_key PK
         int date_key FK
-        int region_key FK
-        float precipitation_mm
-        float temperature_avg
-        float humidity_avg
-        float pressure_avg
+        string region_key FK
+        string weather_type_key FK
+        decimal precipitation_mm
+        decimal temperature_avg_c
+        decimal humidity_avg_pct
+        decimal pressure_avg_hpa
         boolean rainy_day_flag
-        int weather_category_key FK
+        boolean clear_day_flag
+        boolean pressure_drop_flag
     }
 
     FACT_PATIENT_DAY {
-        int patient_day_key PK
-        int patient_Id FK
+        string patient_day_key PK
+        string patient_key FK
         int date_key FK
-        int region_key FK
-        int weather_category_key FK
-        int active_condition_count
+        string region_key FK
+        string weather_type_key FK
+        int disease_event_count
         boolean pain_related_flag
-    
+        boolean rainy_day_flag
     }
 
     FACT_PATIENT_WEATHER_REGION {
-        int patient_weather_key PK
-        int patient_Id FK
-        int diagnosis_key FK
+        string patient_weather_region_key PK
+        string patient_key FK
+        string diagnosis_key FK
         int date_key FK
-        int region_key FK
-        int encounter_key
-        date condition_start
-        date condition_end
+        string region_key FK
+        string weather_type_key FK
+        string condition_id
+        string encounter_id
+        datetime onset_datetime
+        datetime abatement_datetime
         boolean pain_related_flag
-        boolean rainy_day_flag
-        int weather_category_key FK
-        string condition_clinical 
-
+        string occurrence_status
     }
 
     %% =========================
     %% SEOSED
     %% =========================
-    DIM_REGION ||--o{ FACT_WEATHER_REGION_DAY : describes
-    DIM_DATE ||--o{ FACT_WEATHER_REGION_DAY : describes
-    DIM_WEATHER_CATEGORY ||--o{ FACT_WEATHER_REGION_DAY : classifies
+    DIM_PATIENT ||--o{ FACT_PATIENT_DAY : has
+    DIM_DATE ||--o{ FACT_PATIENT_DAY : on
+    DIM_REGION ||--o{ FACT_PATIENT_DAY : in
+    DIM_WEATHER_TYPE ||--o{ FACT_PATIENT_DAY : classified_by
 
-    DIM_REGION ||--o{ FACT_PATIENT_DAY : groups
-    DIM_DATE ||--o{ FACT_PATIENT_DAY : tracks
-    DIM_PATIENTS ||--o{ FACT_PATIENT_DAY : belongs_to
-    DIM_WEATHER_CATEGORY ||--o{ FACT_PATIENT_DAY : classifies
+    DIM_DATE ||--o{ FACT_WEATHER_REGION_DAY : on
+    DIM_REGION ||--o{ FACT_WEATHER_REGION_DAY : in
+    DIM_WEATHER_TYPE ||--o{ FACT_WEATHER_REGION_DAY : classified_by
 
-    DIM_REGION ||--o{ FACT_PATIENT_WEATHER_REGION : groups
-    DIM_DATE ||--o{ FACT_PATIENT_WEATHER_REGION : timestamps
-    DIM_PATIENTS ||--o{ FACT_PATIENT_WEATHER_REGION : belongs_to
-    DIM_DIAGNOSIS ||--o{ FACT_PATIENT_WEATHER_REGION : identifies
-    DIM_WEATHER_CATEGORY ||--o{ FACT_PATIENT_WEATHER_REGION : classifies
+    DIM_PATIENT ||--o{ FACT_PATIENT_WEATHER_REGION : has
+    DIM_DIAGNOSIS ||--o{ FACT_PATIENT_WEATHER_REGION : diagnosed_as
+    DIM_DATE ||--o{ FACT_PATIENT_WEATHER_REGION : on
+    DIM_REGION ||--o{ FACT_PATIENT_WEATHER_REGION : in
+    DIM_WEATHER_TYPE ||--o{ FACT_PATIENT_WEATHER_REGION : classified_by
 ```
