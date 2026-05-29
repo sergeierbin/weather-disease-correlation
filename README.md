@@ -23,15 +23,26 @@ Küsimus: **"Kuidas erinevad ilmastikutingimused mõjutavad krooniliste ja/või 
 Projekti eesmärk on uurida, kuidas jaotuvad valuga seotud diagnoosid piirkonniti ning kas vihmastel ilmastikutingimustel võib olla seos kroonilise valu või liigesevalu diagnooside sagedasema esinemisega. Selleks analüüsitakse, kui palju esineb piirkonnas valudiagnoosiga patsiente ning kas vihmastel/madala õhurõhuga päevadel on nende patsientide arv suurem. Lisaks võrreldakse piirkondade lõikes vihmaste päevade osakaalu, et hinnata, kas ilmastikutingimuste ja vaadeldavate diagnooside vahel võib esineda seos.
 
 **Mõõdikud**
-1. Valuga seotud haiguste esinemissagedus 1000 patsiendi kohta Massachusettsi ja California piirkondades. 
-   **Arvutuvalem:** (valuga seotud haigussündmusega patsientide arv piirkonnas/ kõigi patsientide arv piirkonnas)/1000
-2. Vihmaste päevade osakaal piirkonniti (%)
-    **Arvutusvalem:** (valuga seotud haigussündmusega patsientide arv antud ilmastikutüübis/ kõigi patsientide arv antud ilmastikutüübis)/100
-3. Valuga seotud haiguste progresseerumine kombineeritud ilmastikutüüpide lõikes (külm ja rõske / soe ja vihmane / järsk õhurõhu langus / stabiilne kuiv ilm)
-    **Arvutusvalem:** 1. valuga seotud haigussündmuse päevad vihmases ilmastikutüübis
-                    2.  Esinemissageduse arvutus 1000* punkt 1 tulem / kõigi patsientide arvuga
-                    3. lisada piirkonna mõõtmed, eristades Massachusetts ja California
-                    4. lisada kliinilise haigussündmuse mõõde, kus valuga seotud haigussündmused on klassifitseeritud korduvana
+1. Valuga seotud haiguste esinemissagedus 1000 patsiendi kohta Massachusettsi ja California piirkondades.
+   - **Arvutusvalem:** valuga seotud haigussündmusega patsientide arv piirkonnas / kõigi patsientide arv piirkonnas * 1000
+
+2. Valuga seotud haigustega patsientide osakaal ilmastikutüübi järgi (%).
+   - **Arvutusvalem:** valuga seotud haigussündmusega patsientide arv antud ilmastikutüübis / kõigi patsientide arv antud ilmastikutüübis * 100
+   - Ilmastikutüübid, mille järgi on võimalik filtreerida:
+     - vihm + rõhulangus
+     - vihm ilma rõhulanguseta
+     - kuiv ilm
+     - sekundaarne dimensioon: temperatuur (näiteks külm/soe)
+
+3. Korduvate valuga seotud diagnooside osakaal (%) kombinatsioonis ilmastikutüübi ja rõhulangusega piirkonna lõikes.
+   - **Numerator:** korduvate valuga seotud diagnooside arv, kus `occurrence_status` = `recurrence` või `relapse`
+   - **Denominator:** kõigi valuga seotud diagnooside arv sama rühma ja piirkonna sees
+   - **Arvutusvalem:** korduvate osakaal (%) = numerator / denominator * 100
+   - Rakendatakse iga ilmastikutüübi kohta:
+     - vihm + rõhulangus
+     - vihm ilma rõhulanguseta
+     - kuiv ilm
+     - sekundaarne dimensioon: temperatuur (näiteks külm/soe)
 
 ### Andmeallikad
 1. Ilmastikuandmete API
