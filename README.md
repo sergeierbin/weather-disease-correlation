@@ -93,26 +93,81 @@ Testide tulemused: []
 
 ### Käivitamine
 
+#### Esmakordne käivitamine codespaces ruumis või koduses arvutis
+---
+
+#### Eeltingimused
+
+Pead installeerima:
+- Docker ja Docker Compose
+- Git
+
+---
+
+#### 1. Klooni ja seadista
+
+```bash
+git clone https://github.com/sergeierbin/weather-disease-correlation.git
+cd weather-disease-correlation
+cp .env.example .env
+```
+
+#### 2. Alusta teenuseid
+
+```bash
+docker compose --profile tools run --rm airflow-init
+docker compose --profile tools run --rm superset-init
+docker compose up -d
+```
+
+#### 3. Genereeri andmed
+
+```bash
+docker compose --profile synthea run --rm synthea
+```
+
+#### 4. Käivita pipeline
+
+Ava http://localhost:8080, leia DAG `etl_pipeline` ja klõpsa **Trigger DAG**.
+
+---
+
+#### Teenused
+
+- **Airflow:** http://localhost:8080 (admin/admin)
+- **Superset:** http://localhost:8088 (admin/admin)
+
+---
+
+#### Teenuste peatamine
+
+```bash
+docker compose down
+```
+
+
 ### Saladused ja konfiguratsioon
 
 ### Projekti struktuur
 ```
-etl_project/
+weather-disease-correlation/
 │
 ├── .env                        # Päris credentials (ei lähe git'i)
 ├── .env.example                # Mall — täida ja kopeeri .env-iks
 ├── docker-compose.yml          # Kõik teenused: Postgres, Airflow, Superset, Synthea
-├── runbook.md                  # Käivitusjuhend algusest lõpuni
+├── RUNBOOK.md                  # Käivitusjuhend algusest lõpuni
 ├── andmekihid.md               # Andmemudeli kirjeldus kihtide kaupa
+├── README.md                   # Projekti dokumentatsioon
 │
 ├── docs/                       # Skeemid ja diagrammid
+│   ├── arhitektuur.md          # Süsteemi arhitektuur
+│   ├── ERdiagram.mmd           # Entity-Relationship diagramm
+│   ├── andmevoo_flowchart.mmd  # Andmevoo visualiseerimine
+│   ├── progressiraport.md      # Projekti edenemine
+│   └── andmeallikad.mmd        # Andmeallikate skeem
 │
 ├── postgres/
 │   └── init.sql                # Loob raw skeemi ja tabelid
-│
-├── synthea/
-│   └── synthea-with-dependencies.jar   # Synthea käivitatav fail
-│   └── output/                 # Genereeritud FHIR JSON failid (gitignore'd)
 │
 ├── ingestion/                  # Python skriptid andmete laadimiseks raw skeemi
 │   ├── icd_snomed.csv          # ICD-10 ↔ SNOMED koodide tabel (käsitsi koostatud)
@@ -154,6 +209,9 @@ etl_project/
 │   ├── init_superset.sh        # Seadistab Superseti ja impordib dashboardi
 │   └── dashboards/
 │       └── dashboard_export.zip
+│
+├── notebooks/
+│   └── analüüs.ipynb           # Detailne andmeanalüüs
 │
 └── airflow/
     └── dags/
