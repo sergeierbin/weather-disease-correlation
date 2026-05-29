@@ -35,7 +35,7 @@ Projekti eesmärk on uurida, kuidas jaotuvad valuga seotud diagnoosid piirkonnit
      - sekundaarne dimensioon: temperatuur (näiteks külm/soe)
 
 3. Korduvate valuga seotud diagnooside osakaal (%) kombinatsioonis ilmastikutüübi ja rõhulangusega piirkonna lõikes.
-   - **Numerator:** korduvate valuga seotud diagnooside arv, kus `occurrence_status` = `recurrence` või `relapse`
+   - **Numerator:** korduvate valuga seotud diagnooside arv, kus `clinical_status` = `recurrence` või `relapse`. Viide: [FHIR Condition clinicalStatus loend](https://terminology.hl7.org/7.1.0/en/CodeSystem-condition-clinical.html)
    - **Denominator:** kõigi valuga seotud diagnooside arv sama rühma ja piirkonna sees
    - **Arvutusvalem:** korduvate osakaal (%) = numerator / denominator * 100
    - Rakendatakse iga ilmastikutüübi kohta:
