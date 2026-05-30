@@ -16,7 +16,7 @@ superset init
 python3 - << 'PYEOF'
 import zipfile, os
 
-src = '/app/superset_config/dashboards/dashboard_export.zip'
+src = '/app/superset_config/dashboards/krooniliste_haiguste_ja_ilma_analuus.zip'
 out = '/tmp/dashboard_fixed.zip'
 user = os.environ.get('POSTGRES_USER', 'postgres').encode()
 pw   = os.environ.get('POSTGRES_PASSWORD', 'postgres').encode()
