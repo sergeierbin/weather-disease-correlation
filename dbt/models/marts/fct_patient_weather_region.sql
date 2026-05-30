@@ -46,7 +46,17 @@ with_date AS (
 
 with_weather AS (
     SELECT
-        wd.*,
+        wd.condition_id,
+        wd.patient_id,
+        wd.encounter_id,
+        wd.snomed_code,
+        wd.occurrence_status,
+        wd.onset_datetime,
+        wd.abatement_datetime,
+        wd.organization_id,
+        wd.patient_key,
+        wd.region_key,
+        wd.date_key,
         wc.weather_type_key
     FROM with_date wd
     LEFT JOIN {{ ref('stg_weather') }} w

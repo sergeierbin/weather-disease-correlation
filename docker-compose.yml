@@ -1,5 +1,3 @@
-version: "3.8"
-
 # Shared configuration block reused by all Airflow services (webserver, scheduler, init).
 # The &airflow-common anchor is referenced with <<: *airflow-common below.
 x-airflow-common:
@@ -161,13 +159,12 @@ services:
       start_period: 30s
 
   # ── Superset one-time initialisation ────────────────────────────────────────
-  # Run once before starting superset:
-  #   docker compose --profile tools run --rm superset-init
+  # Runs automatically on every `docker compose up` — idempotent (safe to re-run).
+  # Superset waits for this to complete before starting.
   superset-init:
     image: apache/superset:3.1.3
     container_name: etl_superset_init
-    profiles:
-      - tools  # Only active when --profile tools is passed
+    restart: "no"
     environment:
       SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY}
       SUPERSET_ADMIN_USERNAME: ${SUPERSET_ADMIN_USERNAME}
@@ -175,7 +172,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - superset_data:/app/superset_home
-      - ./superset:/app/superset_config  # Init script and dashboard ZIP
+      - ./superset:/app/superset_config
     depends_on:
       postgres:
         condition: service_healthy
@@ -189,16 +186,17 @@ services:
     container_name: etl_superset
     environment:
       SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY}
-      # Keep users logged in for 8 hours
       SUPERSET_SESSION_COOKIE_SAMESITE: Lax
       SUPERSET_PERMANENT_SESSION_LIFETIME: "28800"
     ports:
       - "8088:8088"
     volumes:
-      - superset_data:/app/superset_home  # Dashboards and settings persist across restarts
+      - superset_data:/app/superset_home
     depends_on:
       postgres:
         condition: service_healthy
+      superset-init:
+        condition: service_completed_successfully
 
 volumes:
   postgres_data:   # PostgreSQL table data

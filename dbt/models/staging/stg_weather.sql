@@ -1,30 +1,20 @@
 WITH source AS (
     SELECT * FROM {{ source('raw', 'weather') }}
-),
-
-with_prev_pressure AS (
-    SELECT
-        lat,
-        lon,
-        date  AS weather_date,
-        tavg,
-        tmin,
-        tmax,
-        prcp,
-        pres,
-        LAG(pres) OVER (PARTITION BY lat, lon ORDER BY date) AS pres_prev
-    FROM source
 )
 
 SELECT
-    lat,
-    lon,
-    weather_date,
-    tavg,
-    tmin,
-    tmax,
-    prcp,
-    pres,
-    pres_prev,
-    pres_prev - pres >= 6 AS pres_drop
-FROM with_prev_pressure
+    s.lat,
+    s.lon,
+    s.date  AS weather_date,
+    s.tavg,
+    s.tmin,
+    s.tmax,
+    s.prcp,
+    s.pres,
+    prev.pres                    AS pres_prev,
+    prev.pres - s.pres >= 6      AS pres_drop
+FROM source s
+LEFT JOIN source prev
+    ON  prev.lat  = s.lat
+    AND prev.lon  = s.lon
+    AND prev.date = s.date - INTERVAL '1 day'
