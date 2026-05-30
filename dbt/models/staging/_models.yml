@@ -29,13 +29,6 @@ models:
           - unique
           - not_null
 
-  - name: stg_organization_locations
-    columns:
-      - name: organization_id
-        data_tests:
-          - unique
-          - not_null
-
   - name: stg_icd_codes
     columns:
       - name: icd10_code

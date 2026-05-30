@@ -5,18 +5,18 @@ WITH categorized AS (
             WHEN prcp > 0               THEN 'vihm_ilma_rohulanguseta'
             ELSE                             'kuiv_ilm'
         END AS weather_type,
-
         CASE
             WHEN tavg IS NULL THEN NULL
             WHEN tavg < 10    THEN 'külm'
             ELSE                   'soe'
-        END AS temp_category
-
+        END AS temperature_band
     FROM {{ ref('stg_weather') }}
 )
 
 SELECT
-    ROW_NUMBER() OVER (ORDER BY weather_type, temp_category) AS weather_category_key,
+    ROW_NUMBER() OVER (ORDER BY weather_type, temperature_band) AS weather_type_key,
+    weather_type IN ('vihm_rohulangusega', 'vihm_ilma_rohulanguseta') AS rain_flag,
+    weather_type = 'vihm_rohulangusega'                               AS pressure_drop_flag,
     weather_type,
-    temp_category
+    temperature_band
 FROM categorized

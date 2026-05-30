@@ -13,9 +13,6 @@ sources:
         description: Diagnoses recorded during encounters (FHIR Condition resource).
       - name: organizations
         description: Healthcare organisations (hospitals, clinics) from Synthea (FHIR Organization resource).
-      - name: organization_locations
-        description: Geocoded lat/lon for each organisation, populated by fetch_weather.py via Open-Meteo geocoding API.
-
       - name: weather
         description: Daily weather observations fetched via Open-Meteo at encounter organisation location.
       - name: icd10_codes

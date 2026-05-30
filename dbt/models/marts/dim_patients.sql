@@ -1,12 +1,5 @@
 SELECT
-    patient_id,
-    birthdate,
-    gender,
-    city,
-    state,
-    lat,
-    lon,
-    deceased_datetime,
-    is_deceased,
-    age_at_death
+    ROW_NUMBER() OVER (ORDER BY patient_id) AS patient_key,
+    patient_id AS source_patient_id,
+    state
 FROM {{ ref('stg_patients') }}

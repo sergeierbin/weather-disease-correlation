@@ -1,5 +1,5 @@
 WITH condition_days AS (
-    SELECT DISTINCT
+    SELECT
         c.patient_id,
         c.onset_datetime::DATE AS onset_date,
         e.organization_id
@@ -12,40 +12,55 @@ with_keys AS (
     SELECT
         cd.patient_id,
         cd.onset_date,
+        cd.organization_id,
+        p.patient_key,
         r.region_key,
         d.date_key,
-        wc.weather_category_key
+        w.prcp,
+        wc.weather_type_key
     FROM condition_days cd
 
-    JOIN {{ ref('stg_organizations') }} o
-        ON o.organization_id = cd.organization_id
+    JOIN {{ ref('dim_patients') }} p
+        ON p.source_patient_id = cd.patient_id
     JOIN {{ ref('dim_region') }} r
-        ON r.city_name = o.city AND r.state_name = o.state
-
+        ON r.organization_id = cd.organization_id
     JOIN {{ ref('dim_date') }} d
         ON d.full_date = cd.onset_date
-
-    LEFT JOIN {{ ref('stg_organization_locations') }} ol
-        ON ol.organization_id = cd.organization_id
     LEFT JOIN {{ ref('stg_weather') }} w
-        ON w.lat = ol.lat AND w.lon = ol.lon AND w.weather_date = cd.onset_date
-    LEFT JOIN {{ ref('dim_weather_category') }} wc
+        ON w.lat = r.latitude AND w.lon = r.longitude AND w.weather_date = cd.onset_date
+    LEFT JOIN {{ ref('dim_weather_type') }} wc
         ON wc.weather_type IS NOT DISTINCT FROM CASE
             WHEN w.prcp > 0 AND w.pres_drop THEN 'vihm_rohulangusega'
             WHEN w.prcp > 0                 THEN 'vihm_ilma_rohulanguseta'
             ELSE                                 'kuiv_ilm'
         END
-        AND wc.temp_category IS NOT DISTINCT FROM CASE
+        AND wc.temperature_band IS NOT DISTINCT FROM CASE
             WHEN w.tavg IS NULL THEN NULL
             WHEN w.tavg < 10    THEN 'külm'
             ELSE                     'soe'
         END
+),
+
+aggregated AS (
+    SELECT
+        patient_key,
+        onset_date,
+        region_key,
+        date_key,
+        MAX(weather_type_key)  AS weather_type_key,
+        COUNT(*)               AS disease_event_count,
+        BOOL_OR(prcp > 0)      AS rainy_day_flag
+    FROM with_keys
+    GROUP BY patient_key, onset_date, region_key, date_key
 )
 
 SELECT
-    ROW_NUMBER() OVER (ORDER BY patient_id, onset_date, region_key) AS patient_day_key,
-    patient_id,
+    ROW_NUMBER() OVER (ORDER BY patient_key, onset_date, region_key) AS patient_day_key,
+    patient_key,
     date_key,
     region_key,
-    weather_category_key
-FROM with_keys
+    weather_type_key,
+    disease_event_count,
+    TRUE         AS pain_related_flag,
+    rainy_day_flag
+FROM aggregated

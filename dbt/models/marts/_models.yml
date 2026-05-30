@@ -31,9 +31,9 @@ models:
           - unique
           - not_null
 
-  - name: dim_weather_category
+  - name: dim_weather_type
     columns:
-      - name: weather_category_key
+      - name: weather_type_key
         data_tests:
           - unique
           - not_null

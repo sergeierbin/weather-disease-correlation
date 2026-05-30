@@ -31,15 +31,15 @@ CONDITION_DATES_SQL = """
         o.id,
         o.city,
         o.state,
-        ol.lat,
-        ol.lon,
+        o.lat,
+        o.lon,
         c.onset_datetime::DATE AS onset_date
     FROM raw.conditions c
     JOIN raw.encounters e ON e.encounter_id = c.encounter_id
     JOIN raw.organizations o ON o.id = e.organization_id
-    JOIN raw.organization_locations ol ON ol.organization_id = o.id
     WHERE c.onset_datetime IS NOT NULL
       AND c.onset_datetime::DATE <= %s
+      AND o.lat IS NOT NULL
     ORDER BY o.id, c.onset_datetime::DATE
 """
 
