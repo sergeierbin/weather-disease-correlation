@@ -93,13 +93,9 @@ Testide tulemused: []
 
 ### Käivitamine
 
-#### Esmakordne käivitamine codespaces ruumis või koduses arvutis
----
-
 #### Eeltingimused
 
-Pead installeerima:
-- Docker ja Docker Compose
+- Docker Desktop
 - Git
 
 ---
@@ -112,37 +108,49 @@ cd weather-disease-correlation
 cp .env.example .env
 ```
 
-#### 2. Alusta teenuseid
+---
 
-```bash
-docker compose --profile tools run --rm airflow-init
-docker compose --profile tools run --rm superset-init
-docker compose up -d
-```
-
-#### 3. Genereeri andmed
+#### 2. Genereeri Synthea patsiendid
 
 ```bash
 docker compose --profile synthea run --rm synthea
 ```
 
-#### 4. Käivita pipeline
-
-Ava http://localhost:8080, leia DAG `etl_pipeline` ja klõpsa **Trigger DAG**.
+Laeb JAR-i (~150 MB) ja genereerib ~200 patsiendifaili. Võtab 2–3 minutit.
 
 ---
 
-#### Teenused
-
-- **Airflow:** http://localhost:8080 (admin/admin)
-- **Superset:** http://localhost:8088 (admin/admin)
-
----
-
-#### Teenuste peatamine
+#### 3. Ehita ja käivita kogu stack
 
 ```bash
-docker compose down
+docker compose build
+docker compose up -d
+```
+
+Käivitab automaatselt: PostgreSQL → Airflow init → Airflow → Superset init → Superset.
+Oota ~2 minutit kuni kõik teenused käivituvad.
+
+---
+
+#### 4. Käivita ETL pipeline
+
+Ava **Airflow**: http://localhost:8080 (admin / admin)
+- Leia DAG `etl_pipeline`
+- Vajuta ▶ (Trigger DAG)
+- Oota ~10–15 minutit kuni kõik 4 taski rohelised
+
+Ava **Superset**: http://localhost:8088 (admin / admin)
+- Dashboard on automaatselt imporditud
+
+---
+
+#### Kasulikud käsud
+
+```bash
+docker compose logs -f airflow-scheduler   # jälgi ETL kulgu
+docker compose down                         # peata kõik
+docker compose down -v                      # peata + kustuta andmed
+docker compose down --remove-orphans        # peata + eemalda orb-konteinerid
 ```
 
 
@@ -154,19 +162,24 @@ weather-disease-correlation/
 │
 ├── .env                        # Päris credentials (ei lähe git'i)
 ├── .env.example                # Mall — täida ja kopeeri .env-iks
+├── .gitattributes              # Ühtlased reavahetused (LF)
 ├── docker-compose.yml          # Kõik teenused: Postgres, Airflow, Superset, Synthea
-├── RUNBOOK.md                  # Käivitusjuhend algusest lõpuni
 ├── README.md                   # Projekti dokumentatsioon
+│
+├── .vscode/
+│   └── settings.json           # VS Code seaded (T-SQL linter keelatud dbt jaoks)
 │
 ├── docs/                       # Skeemid ja diagrammid
 │   ├── arhitektuur.md          # Süsteemi arhitektuur
-│   ├── ERdiagram.mmd           # Entity-Relationship diagramm
-│   ├── andmevoo_flowchart.mmd  # Andmevoo visualiseerimine
 │   ├── progressiraport.md      # Projekti edenemine
-│   └── andmeallikad.mmd        # Andmeallikate skeem
+│   └── Mõõdikud - Tulemused.md
+│
+├── docker/
+│   └── airflow/
+│       └── Dockerfile          # Kohandatud Airflow image (dbt + meteostat sisse küpsetatud)
 │
 ├── postgres/
-│   └── init.sql                # Loob raw skeemi ja tabelid
+│   └── init.sql                # Loob skeemid, tabelid ja indeksid
 │
 ├── ingestion/                  # Python skriptid andmete laadimiseks raw skeemi
 │   ├── icd_snomed.csv          # ICD-10 ↔ SNOMED koodide tabel (käsitsi koostatud)
@@ -174,7 +187,6 @@ weather-disease-correlation/
 │   ├── fetch_icd_codes.py      # icd_snomed.csv → raw.icd10_codes
 │   ├── fetch_weather.py        # Meteostat → raw.weather
 │   └── utils/
-│       ├── __init__.py
 │       ├── db.py               # PostgreSQL ühenduse abifunktsioonid
 │       └── codes.py            # Laadib TARGET_SNOMED_CODES icd_snomed.csv-st
 │
@@ -183,7 +195,7 @@ weather-disease-correlation/
 │   ├── profiles.yml            # Ühenduse seaded PostgreSQL-iga
 │   └── models/
 │       ├── staging/            # dbt vaated — puhastab ja nimetab raw andmed ümber
-│       │   ├── _sources.yml
+│       │   ├── _sources.yml    # Allikate definitsioonid + freshness testid
 │       │   ├── _models.yml
 │       │   ├── stg_patients.sql
 │       │   ├── stg_encounters.sql
@@ -192,8 +204,8 @@ weather-disease-correlation/
 │       │   ├── stg_weather.sql
 │       │   └── stg_icd_codes.sql
 │       │
-│       └── marts/              # dbt tabelid — lõplik star schema analüüsiks
-│           ├── _models.yml
+│       └── marts/              # dbt inkrementaalsed tabelid — star schema analüüsiks
+│           ├── _models.yml     # Andmekvaliteedi testid (unique, not_null, relationships)
 │           ├── dim_patients.sql
 │           ├── dim_diagnosis.sql
 │           ├── dim_date.sql
@@ -203,13 +215,14 @@ weather-disease-correlation/
 │           ├── fct_patient_weather_region.sql
 │           └── fct_weather_region_day.sql
 │
+├── tests/                      # pytest unit testid
+│   ├── test_fetch_synthea.py
+│   └── test_fetch_weather.py
+│
 ├── superset/
 │   ├── init_superset.sh        # Seadistab Superseti ja impordib dashboardi
 │   └── dashboards/
 │       └── krooniliste_haiguste_ja_ilma_analuus.zip
-│
-├── notebooks/
-│   └── analüüs.ipynb           # Detailne andmeanalüüs
 │
 └── airflow/
     └── dags/
