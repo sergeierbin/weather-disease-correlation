@@ -12,6 +12,7 @@
 import os
 import sys
 import logging
+import threading
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 
@@ -50,21 +51,48 @@ INSERT_SQL = """
 
 
 def fetch_weather(lat, lon, start, end):
-    """Fetch all daily weather rows for (lat, lon) between start and end (inclusive)."""
+    """Fetch all daily weather rows for (lat, lon) between start and end (inclusive).
+    Falls back to progressively larger search radii if no nearby station has data.
+    Note: Point.radius is a class-level attribute in Meteostat 1.6.8."""
     start_dt = datetime(start.year, start.month, start.day)
     end_dt   = datetime(end.year, end.month, end.day)
-    data = Daily(Point(lat, lon), start_dt, end_dt).fetch()
-    if data.empty:
-        return []
-    rows = []
-    for ts, row in data.iterrows():
-        row_date = ts.date() if hasattr(ts, "date") else ts
-        rows.append((
-            lat, lon, row_date,
-            row.get("tavg"), row.get("tmin"), row.get("tmax"),
-            row.get("prcp"), row.get("pres"),
-        ))
-    return rows
+
+    original_radius = Point.radius
+    try:
+        for radius_km in [35, 75, 150]:
+            Point.radius = radius_km * 1000
+
+            result = [None]
+
+            def _fetch(r=result):
+                r[0] = Daily(Point(lat, lon), start_dt, end_dt).fetch()
+
+            t = threading.Thread(target=_fetch, daemon=True)
+            t.start()
+            t.join(timeout=30)
+
+            if t.is_alive():
+                log.warning("Timeout %d km raadiusega (%.4f, %.4f) — jätan vahele", radius_km, lat, lon)
+                break
+
+            data = result[0]
+            if data is not None and not data.empty:
+                if radius_km > 35:
+                    log.info("Fallback radius %d km kasutati asukohale (%.4f, %.4f)", radius_km, lat, lon)
+                rows = []
+                for ts, row in data.iterrows():
+                    row_date = ts.date() if hasattr(ts, "date") else ts
+                    rows.append((
+                        lat, lon, row_date,
+                        row.get("tavg"), row.get("tmin"), row.get("tmax"),
+                        row.get("prcp"), row.get("pres"),
+                    ))
+                return rows
+            # data empty — proovi järgmist raadiust
+    finally:
+        Point.radius = original_radius  # alati taasta algne väärtus
+
+    return []
 
 
 def group_dates_by_location(rows_in):
