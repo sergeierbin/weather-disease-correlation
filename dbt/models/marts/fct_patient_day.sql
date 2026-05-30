@@ -4,12 +4,13 @@ WITH condition_days AS (
     SELECT
         c.patient_id,
         c.onset_datetime::DATE AS onset_date,
+        c.loaded_at,
         e.organization_id
     FROM {{ ref('stg_conditions') }} c
     JOIN {{ ref('stg_encounters') }} e ON e.encounter_id = c.encounter_id
     WHERE c.onset_datetime IS NOT NULL
     {% if is_incremental() %}
-      AND c.onset_datetime::DATE > (SELECT MAX(onset_date) FROM {{ this }}) - INTERVAL '7 days'
+      AND c.loaded_at > (SELECT MAX(loaded_at) FROM {{ this }})
     {% endif %}
 ),
 
@@ -18,6 +19,7 @@ with_keys AS (
         cd.patient_id,
         cd.onset_date,
         cd.organization_id,
+        cd.loaded_at,
         p.patient_key,
         r.region_key,
         d.date_key,
@@ -54,7 +56,8 @@ aggregated AS (
         date_key,
         MAX(weather_type_key)  AS weather_type_key,
         COUNT(*)               AS disease_event_count,
-        BOOL_OR(prcp > 0)      AS rainy_day_flag
+        BOOL_OR(prcp > 0)      AS rainy_day_flag,
+        MAX(loaded_at)         AS loaded_at
     FROM with_keys
     GROUP BY patient_key, onset_date, region_key, date_key
 )
@@ -67,5 +70,6 @@ SELECT
     region_key,
     weather_type_key,
     disease_event_count,
-    rainy_day_flag
+    rainy_day_flag,
+    loaded_at
 FROM aggregated

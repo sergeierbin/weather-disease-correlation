@@ -9,12 +9,13 @@ WITH weather_with_region AS (
         w.tavg,
         w.pres,
         w.pres_drop,
+        w.loaded_at,
         r.region_key
     FROM {{ ref('stg_weather') }} w
     JOIN {{ ref('dim_region') }} r
         ON r.latitude = w.lat AND r.longitude = w.lon
     {% if is_incremental() %}
-    WHERE w.weather_date > (SELECT MAX(weather_date) FROM {{ this }}) - INTERVAL '7 days'
+    WHERE w.loaded_at > (SELECT MAX(loaded_at) FROM {{ this }})
     {% endif %}
 ),
 
@@ -26,6 +27,7 @@ with_keys AS (
         wr.tavg,
         wr.pres,
         wr.pres_drop,
+        wr.loaded_at,
         d.date_key,
         wc.weather_type_key
     FROM weather_with_region wr
@@ -57,5 +59,6 @@ SELECT
     pres             AS pressure_avg_hpa,
     prcp > 0         AS rainy_day_flag,
     prcp = 0         AS clear_day_flag,
-    pres_drop        AS pressure_drop_flag
+    pres_drop        AS pressure_drop_flag,
+    loaded_at
 FROM with_keys

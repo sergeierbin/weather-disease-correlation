@@ -9,11 +9,12 @@ WITH conditions_with_encounter AS (
         c.clinical_status              AS occurrence_status,
         c.onset_datetime::DATE         AS onset_datetime,
         c.abatement_datetime::DATE     AS abatement_datetime,
+        c.loaded_at,
         e.organization_id
     FROM {{ ref('stg_conditions') }} c
     LEFT JOIN {{ ref('stg_encounters') }} e ON e.encounter_id = c.encounter_id
     {% if is_incremental() %}
-    WHERE c.onset_datetime::DATE > (SELECT MAX(onset_datetime) FROM {{ this }}) - INTERVAL '7 days'
+    WHERE c.loaded_at > (SELECT MAX(loaded_at) FROM {{ this }})
     {% endif %}
 ),
 
@@ -53,6 +54,7 @@ with_weather AS (
         wd.occurrence_status,
         wd.onset_datetime,
         wd.abatement_datetime,
+        wd.loaded_at,
         wd.organization_id,
         wd.patient_key,
         wd.region_key,
@@ -93,5 +95,6 @@ SELECT
     encounter_id,
     onset_datetime,
     abatement_datetime,
-    occurrence_status
+    occurrence_status,
+    loaded_at
 FROM with_diagnosis

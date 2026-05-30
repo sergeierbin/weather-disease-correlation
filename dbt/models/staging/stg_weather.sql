@@ -11,6 +11,7 @@ SELECT
     s.tmax,
     s.prcp,
     s.pres,
+    s.loaded_at,
     prev.pres                    AS pres_prev,
     prev.pres - s.pres >= 6      AS pres_drop
 FROM source s

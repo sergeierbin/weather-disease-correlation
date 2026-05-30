@@ -11,7 +11,8 @@ renamed AS (
         condition_display,
         clinical_status,
         onset_datetime,
-        abatement_datetime
+        abatement_datetime,
+        loaded_at
     FROM source
 )
 
