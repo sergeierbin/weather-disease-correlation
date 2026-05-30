@@ -33,6 +33,7 @@ x-airflow-common:
     AIRFLOW__SMTP__SMTP_MAIL_FROM: ${AIRFLOW_SMTP_MAIL_FROM:-airflow@localhost}
     AIRFLOW__SMTP__SMTP_SSL: "false"
     AIRFLOW__SMTP__SMTP_STARTTLS: "true"
+    AIRFLOW_ALERT_EMAIL: ${AIRFLOW_ALERT_EMAIL:-}
     # Warehouse credentials forwarded to DAGs so they can write to PostgreSQL
     POSTGRES_HOST: postgres
     POSTGRES_PORT: "5432"

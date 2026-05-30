@@ -13,6 +13,9 @@ WITH weather_with_region AS (
     FROM {{ ref('stg_weather') }} w
     JOIN {{ ref('dim_region') }} r
         ON r.latitude = w.lat AND r.longitude = w.lon
+    {% if is_incremental() %}
+    WHERE w.weather_date > (SELECT MAX(weather_date) FROM {{ this }}) - INTERVAL '7 days'
+    {% endif %}
 ),
 
 with_keys AS (
@@ -56,6 +59,3 @@ SELECT
     prcp = 0         AS clear_day_flag,
     pres_drop        AS pressure_drop_flag
 FROM with_keys
-{% if is_incremental() %}
-WHERE weather_date > (SELECT MAX(weather_date) FROM {{ this }}) - INTERVAL '7 days'
-{% endif %}

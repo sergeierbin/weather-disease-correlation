@@ -1,9 +1,8 @@
-# Parses Synthea FHIR R4 JSON bundles and loads five resource types into PostgreSQL:
+# Parses Synthea FHIR R4 JSON bundles and loads four resource types into PostgreSQL:
 #   Patient      → raw.patients
 #   Encounter    → raw.encounters
-#   Organization → raw.organizations
+#   Organization → raw.organizations  (lat/lon from Location resources merged in)
 #   Condition    → raw.conditions
-#   Location     → raw.organization_locations (lat/lon coordinates per organization)
 #
 # Input:  FHIR_DIR (env var or default ./synthea/output/fhir) — one JSON file per patient
 # Output: upserted rows in the raw schema (safe to re-run; duplicates are skipped)

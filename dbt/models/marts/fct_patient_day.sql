@@ -8,6 +8,9 @@ WITH condition_days AS (
     FROM {{ ref('stg_conditions') }} c
     JOIN {{ ref('stg_encounters') }} e ON e.encounter_id = c.encounter_id
     WHERE c.onset_datetime IS NOT NULL
+    {% if is_incremental() %}
+      AND c.onset_datetime::DATE > (SELECT MAX(onset_date) FROM {{ this }}) - INTERVAL '7 days'
+    {% endif %}
 ),
 
 with_keys AS (
@@ -66,6 +69,3 @@ SELECT
     disease_event_count,
     rainy_day_flag
 FROM aggregated
-{% if is_incremental() %}
-WHERE onset_date > (SELECT MAX(onset_date) FROM {{ this }}) - INTERVAL '7 days'
-{% endif %}

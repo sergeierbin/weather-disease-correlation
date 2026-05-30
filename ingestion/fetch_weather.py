@@ -2,7 +2,7 @@
 # and loads them into raw.weather.
 #
 # Strategy:
-#   1. Query raw.conditions + raw.encounters + raw.organizations
+#   1. Query raw.conditions + raw.encounters + raw.organizations (lat/lon stored here)
 #      to find each unique (organisation, lat, lon, onset_date) combination.
 #   2. Group by (lat, lon) and fetch one date range per location
 #      (min(onset_dates)-1 through max(onset_dates)) — avoids N API calls

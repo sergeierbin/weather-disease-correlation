@@ -7,7 +7,7 @@ ETL pipeline DAG — orchestrates the full data flow:
                     ────────────────────┘
 
 Steps:
-  1. fetch_synthea   — parse FHIR JSON bundles → raw.patients / encounters / organizations / conditions / organization_locations
+  1. fetch_synthea   — parse FHIR JSON bundles → raw.patients / encounters / organizations (with lat/lon) / conditions
   2. fetch_icd_codes — load icd_snomed.csv       → raw.icd10_codes         (runs in parallel with step 1)
   3. fetch_weather   — fetch weather (Meteostat) using coordinates from raw.organization_locations → raw.weather
   4. dbt_run         — run all dbt models       → staging / intermediate / marts
@@ -34,7 +34,7 @@ def on_failure(context):
 
 # ── Default task settings ────────────────────────────────────────────────────
 
-_alert_email = os.environ.get("AIRFLOW_SMTP_MAIL_FROM") or None
+_alert_email = os.environ.get("AIRFLOW_ALERT_EMAIL") or None
 
 default_args = {
     "owner": "airflow",
@@ -80,7 +80,7 @@ with DAG(
 
     # ── Step 3: ingest weather ───────────────────────────────────────────────
     # Fetches daily historical weather (Meteostat) → raw.weather.
-    # Coordinates come from raw.organization_locations, populated by ingest_synthea.
+    # Coordinates come from raw.organizations.lat/lon, populated by ingest_synthea.
     # Must run after ingest_synthea so organisation locations are available.
     ingest_weather = BashOperator(
         task_id="ingest_weather",
