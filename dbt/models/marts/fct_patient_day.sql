@@ -1,51 +1,49 @@
-WITH encounter_days AS (
+WITH condition_days AS (
     SELECT DISTINCT
-        e.patient_id,
-        e.period_start::DATE AS encounter_date,
+        c.patient_id,
+        c.onset_datetime::DATE AS onset_date,
         e.organization_id
-    FROM {{ ref('stg_encounters') }} e
+    FROM {{ ref('stg_conditions') }} c
+    JOIN {{ ref('stg_encounters') }} e ON e.encounter_id = c.encounter_id
+    WHERE c.onset_datetime IS NOT NULL
 ),
 
 with_keys AS (
     SELECT
-        ed.patient_id,
-        ed.encounter_date,
+        cd.patient_id,
+        cd.onset_date,
         r.region_key,
         d.date_key,
         wc.weather_category_key
-    FROM encounter_days ed
+    FROM condition_days cd
 
     JOIN {{ ref('stg_organizations') }} o
-        ON o.organization_id = ed.organization_id
+        ON o.organization_id = cd.organization_id
     JOIN {{ ref('dim_region') }} r
         ON r.city_name = o.city AND r.state_name = o.state
 
     JOIN {{ ref('dim_date') }} d
-        ON d.full_date = ed.encounter_date
+        ON d.full_date = cd.onset_date
 
     LEFT JOIN {{ ref('stg_organization_locations') }} ol
-        ON ol.organization_id = ed.organization_id
+        ON ol.organization_id = cd.organization_id
     LEFT JOIN {{ ref('stg_weather') }} w
-        ON w.lat = ol.lat AND w.lon = ol.lon AND w.weather_date = ed.encounter_date
+        ON w.lat = ol.lat AND w.lon = ol.lon AND w.weather_date = cd.onset_date
     LEFT JOIN {{ ref('dim_weather_category') }} wc
-        ON wc.rain_flag IS NOT DISTINCT FROM (w.prcp > 0)
+        ON wc.weather_type IS NOT DISTINCT FROM CASE
+            WHEN w.prcp > 0 AND w.pres_drop THEN 'vihm_rohulangusega'
+            WHEN w.prcp > 0                 THEN 'vihm_ilma_rohulanguseta'
+            ELSE                                 'kuiv_ilm'
+        END
         AND wc.temp_category IS NOT DISTINCT FROM CASE
             WHEN w.tavg IS NULL THEN NULL
-            WHEN w.tavg < 0    THEN 'külm'
-            WHEN w.tavg < 10   THEN 'jahe'
-            WHEN w.tavg < 20   THEN 'soe'
-            ELSE                    'kuum'
-        END
-        AND wc.pressure_category IS NOT DISTINCT FROM CASE
-            WHEN w.pres IS NULL THEN NULL
-            WHEN w.pres < 1000  THEN 'madal'
-            WHEN w.pres <= 1020 THEN 'normaalne'
-            ELSE                    'kõrge'
+            WHEN w.tavg < 10    THEN 'külm'
+            ELSE                     'soe'
         END
 )
 
 SELECT
-    ROW_NUMBER() OVER (ORDER BY patient_id, encounter_date, region_key) AS patient_day_key,
+    ROW_NUMBER() OVER (ORDER BY patient_id, onset_date, region_key) AS patient_day_key,
     patient_id,
     date_key,
     region_key,

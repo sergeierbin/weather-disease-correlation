@@ -41,6 +41,8 @@ x-airflow-common:
     POSTGRES_USER: ${POSTGRES_USER}
     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     POSTGRES_DB: ${POSTGRES_DB}
+    # Max patient files to parse (0 = no limit)
+    FHIR_LIMIT: ${FHIR_LIMIT:-0}
 
   volumes:
     - ./airflow/dags:/opt/airflow/dags          # DAG definitions

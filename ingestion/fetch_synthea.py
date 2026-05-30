@@ -1,8 +1,9 @@
-# Parses Synthea FHIR R4 JSON bundles and loads four resource types into PostgreSQL:
+# Parses Synthea FHIR R4 JSON bundles and loads five resource types into PostgreSQL:
 #   Patient      → raw.patients
 #   Encounter    → raw.encounters
 #   Organization → raw.organizations
 #   Condition    → raw.conditions
+#   Location     → raw.organization_locations (lat/lon coordinates per organization)
 #
 # Input:  FHIR_DIR (env var or default ./synthea/output/fhir) — one JSON file per patient
 # Output: upserted rows in the raw schema (safe to re-run; duplicates are skipped)
@@ -23,6 +24,9 @@ log = logging.getLogger(__name__)
 
 # Directory containing Synthea FHIR bundles — override with FHIR_DIR env var
 FHIR_DIR = Path(os.environ.get("FHIR_DIR", "/opt/airflow/synthea_output/fhir"))
+
+# Max number of patient files to process — 0 means no limit (override with FHIR_LIMIT env var)
+FHIR_LIMIT = int(os.environ.get("FHIR_LIMIT", "0"))
 
 
 # ── FHIR helpers ──────────────────────────────────────────────────────────────
@@ -121,6 +125,16 @@ def parse_organization(r):
     )
 
 
+def parse_location(r):
+    position = r.get("position", {})
+    org_ref  = r.get("managingOrganization", {}).get("identifier", {}).get("value")
+    lat = position.get("latitude")
+    lon = position.get("longitude")
+    if org_ref is None or lat is None or lon is None:
+        return None
+    return (org_ref, round(lat, 6), round(lon, 6))
+
+
 def parse_condition(r):
     code_obj = r.get("code", {})  # The diagnosis CodeableConcept
 
@@ -150,6 +164,7 @@ def parse_bundle(path):
     encounters    = []
     organizations = []
     conditions    = []
+    locations     = []
 
     for entry in bundle.get("entry", []):
         r     = entry.get("resource", {})
@@ -170,8 +185,12 @@ def parse_bundle(path):
             condition_code = row[6]  # condition_code is the 7th field in parse_condition
             if condition_code in TARGET_SNOMED_CODES:
                 conditions.append(row)
+        elif rtype == "Location":
+            row = parse_location(r)
+            if row is not None:
+                locations.append(row)
 
-    return patients, encounters, organizations, conditions
+    return patients, encounters, organizations, conditions, locations
 
 # ── SQL statements ────────────────────────────────────────────────────────────
 
@@ -200,6 +219,12 @@ ORGANIZATIONS_SQL = """
     ON CONFLICT (id) DO NOTHING
 """
 
+ORG_LOCATIONS_SQL = """
+    INSERT INTO raw.organization_locations (organization_id, lat, lon)
+    VALUES %s
+    ON CONFLICT (organization_id) DO NOTHING
+"""
+
 CONDITIONS_SQL = """
     INSERT INTO raw.conditions
         (condition_id, patient_id, encounter_id, clinical_status,
@@ -223,21 +248,27 @@ def main():
     all_encounters    = []
     all_organizations = []
     all_conditions    = []
+    all_locations     = []
 
+    patient_count = 0
     for path in files:
         try:
             if path.stem.startswith("hospitalInformation"):
-                # Hospital bundles contain Organization resources but no patients/encounters
-                _, _, o, _ = parse_bundle(path)
+                # Hospital bundles contain Organization and Location resources
+                _, _, o, _, l = parse_bundle(path)
                 all_organizations.extend(o)
+                all_locations.extend(l)
             elif path.stem.startswith("practitionerInformation"):
                 continue
             else:
-                p, e, o, c = parse_bundle(path)
+                if FHIR_LIMIT and patient_count >= FHIR_LIMIT:
+                    continue
+                p, e, o, c, _ = parse_bundle(path)
                 all_patients.extend(p)
                 all_encounters.extend(e)
                 all_organizations.extend(o)
                 all_conditions.extend(c)
+                patient_count += 1
         except Exception as exc:
             log.warning("Skipping %s: %s", path.name, exc)
 
@@ -251,10 +282,11 @@ def main():
     # Keep only organizations linked to a relevant encounter
     kept_org_ids = {e[13] for e in all_encounters if e[13] is not None}
     all_organizations = [o for o in all_organizations if o[0] in kept_org_ids]
+    all_locations     = [l for l in all_locations     if l[0] in kept_org_ids]
 
     log.info(
-        "Parsed %d patients, %d encounters, %d organizations, %d conditions",
-        len(all_patients), len(all_encounters), len(all_organizations), len(all_conditions),
+        "Parsed %d patients, %d encounters, %d organizations, %d conditions, %d locations",
+        len(all_patients), len(all_encounters), len(all_organizations), len(all_conditions), len(all_locations),
     )
 
     conn = get_connection()
@@ -271,6 +303,9 @@ def main():
 
         execute_values(conn, CONDITIONS_SQL,    all_conditions)
         log.info("Loaded %d rows → raw.conditions", len(all_conditions))
+
+        execute_values(conn, ORG_LOCATIONS_SQL, all_locations)
+        log.info("Loaded %d rows → raw.organization_locations", len(all_locations))
     finally:
         conn.close()  # Always close, even if an insert raises
 

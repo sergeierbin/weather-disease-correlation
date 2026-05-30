@@ -6,6 +6,7 @@ WITH weather_with_region AS (
         w.prcp,
         w.tavg,
         w.pres,
+        w.pres_drop,
         r.region_key
     FROM {{ ref('stg_weather') }} w
     JOIN {{ ref('stg_organization_locations') }} ol
@@ -31,19 +32,15 @@ with_keys AS (
         ON d.full_date = wr.weather_date
 
     LEFT JOIN {{ ref('dim_weather_category') }} wc
-        ON wc.rain_flag IS NOT DISTINCT FROM (wr.prcp > 0)
+        ON wc.weather_type IS NOT DISTINCT FROM CASE
+            WHEN wr.prcp > 0 AND wr.pres_drop THEN 'vihm_rohulangusega'
+            WHEN wr.prcp > 0                   THEN 'vihm_ilma_rohulanguseta'
+            ELSE                                    'kuiv_ilm'
+        END
         AND wc.temp_category IS NOT DISTINCT FROM CASE
             WHEN wr.tavg IS NULL THEN NULL
-            WHEN wr.tavg < 0    THEN 'külm'
-            WHEN wr.tavg < 10   THEN 'jahe'
-            WHEN wr.tavg < 20   THEN 'soe'
-            ELSE                     'kuum'
-        END
-        AND wc.pressure_category IS NOT DISTINCT FROM CASE
-            WHEN wr.pres IS NULL THEN NULL
-            WHEN wr.pres < 1000  THEN 'madal'
-            WHEN wr.pres <= 1020 THEN 'normaalne'
-            ELSE                      'kõrge'
+            WHEN wr.tavg < 10    THEN 'külm'
+            ELSE                      'soe'
         END
 )
 

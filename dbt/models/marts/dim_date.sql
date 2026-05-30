@@ -1,6 +1,6 @@
 WITH date_spine AS (
     SELECT GENERATE_SERIES(
-        (SELECT MIN(period_start)::DATE FROM {{ ref('stg_encounters') }}),
+        (SELECT MIN(onset_datetime)::DATE FROM {{ ref('stg_conditions') }} WHERE onset_datetime IS NOT NULL),
         CURRENT_DATE,
         INTERVAL '1 day'
     )::DATE AS full_date

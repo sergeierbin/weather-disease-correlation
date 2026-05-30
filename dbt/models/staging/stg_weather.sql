@@ -2,7 +2,7 @@ WITH source AS (
     SELECT * FROM {{ source('raw', 'weather') }}
 ),
 
-renamed AS (
+with_prev_pressure AS (
     SELECT
         lat,
         lon,
@@ -11,8 +11,20 @@ renamed AS (
         tmin,
         tmax,
         prcp,
-        pres
+        pres,
+        LAG(pres) OVER (PARTITION BY lat, lon ORDER BY date) AS pres_prev
     FROM source
 )
 
-SELECT * FROM renamed
+SELECT
+    lat,
+    lon,
+    weather_date,
+    tavg,
+    tmin,
+    tmax,
+    prcp,
+    pres,
+    pres_prev,
+    pres_prev - pres >= 6 AS pres_drop
+FROM with_prev_pressure

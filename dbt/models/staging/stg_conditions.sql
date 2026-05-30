@@ -7,14 +7,10 @@ renamed AS (
         condition_id,
         patient_id,
         encounter_id,
-        clinical_status,
-        verification_status,
-        category_code,
         condition_code,
-        condition_code_system,
         condition_display,
+        clinical_status,
         onset_datetime,
-        recorded_date,
         abatement_datetime
     FROM source
 )

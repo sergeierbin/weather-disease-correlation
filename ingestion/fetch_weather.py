@@ -1,19 +1,20 @@
-# Fetches daily weather observations for each unique encounter organisation location
+# Fetches daily weather observations for each unique condition organisation location
 # and loads them into raw.weather.
 #
 # Strategy:
-#   1. Query raw.encounters + raw.organizations to find each unique organisation
-#      and the encounter dates.
-#   2. Geocode each organisation's city + state to lat/lon using the Open-Meteo
-#      geocoding API; store the result in raw.organization_locations.
+#   1. Query raw.conditions + raw.encounters + raw.organizations + raw.organization_locations
+#      to find each unique (organisation, lat, lon, onset_date) combination.
+#   2. For each onset date, fetch weather for that day AND the previous day.
 #   3. Fetch daily historical weather from Meteostat for each location and date.
 #   4. Upsert rows into raw.weather (safe to re-run; duplicates are ignored).
+#
+# Coordinates come directly from raw.organization_locations, which is populated by
+# fetch_synthea.py from the Location resources in the hospitalInformation FHIR bundles.
 
 import os
 import sys
 import logging
-import requests
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from utils.db import get_connection, execute_values
@@ -25,42 +26,21 @@ log = logging.getLogger(__name__)
 
 TODAY = date.today()
 
-GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
-
-STATE_NAMES = {
-    "AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas",
-    "CA": "California", "CO": "Colorado", "CT": "Connecticut", "DE": "Delaware",
-    "FL": "Florida", "GA": "Georgia", "HI": "Hawaii", "ID": "Idaho",
-    "IL": "Illinois", "IN": "Indiana", "IA": "Iowa", "KS": "Kansas",
-    "KY": "Kentucky", "LA": "Louisiana", "ME": "Maine", "MD": "Maryland",
-    "MA": "Massachusetts", "MI": "Michigan", "MN": "Minnesota", "MS": "Mississippi",
-    "MO": "Missouri", "MT": "Montana", "NE": "Nebraska", "NV": "Nevada",
-    "NH": "New Hampshire", "NJ": "New Jersey", "NM": "New Mexico", "NY": "New York",
-    "NC": "North Carolina", "ND": "North Dakota", "OH": "Ohio", "OK": "Oklahoma",
-    "OR": "Oregon", "PA": "Pennsylvania", "RI": "Rhode Island", "SC": "South Carolina",
-    "SD": "South Dakota", "TN": "Tennessee", "TX": "Texas", "UT": "Utah",
-    "VT": "Vermont", "VA": "Virginia", "WA": "Washington", "WV": "West Virginia",
-    "WI": "Wisconsin", "WY": "Wyoming",
-}
-
-ENCOUNTER_DATES_SQL = """
+CONDITION_DATES_SQL = """
     SELECT DISTINCT
         o.id,
         o.city,
         o.state,
-        e.period_start::DATE AS encounter_date
-    FROM raw.encounters e
+        ol.lat,
+        ol.lon,
+        c.onset_datetime::DATE AS onset_date
+    FROM raw.conditions c
+    JOIN raw.encounters e ON e.encounter_id = c.encounter_id
     JOIN raw.organizations o ON o.id = e.organization_id
-    WHERE o.city IS NOT NULL
-      AND o.state IS NOT NULL
-      AND e.period_start::DATE <= %s
-    ORDER BY o.id, e.period_start::DATE
-"""
-
-INSERT_ORG_LOCATION_SQL = """
-    INSERT INTO raw.organization_locations (organization_id, lat, lon)
-    VALUES (%s, %s, %s)
-    ON CONFLICT (organization_id) DO NOTHING
+    JOIN raw.organization_locations ol ON ol.organization_id = o.id
+    WHERE c.onset_datetime IS NOT NULL
+      AND c.onset_datetime::DATE <= %s
+    ORDER BY o.id, c.onset_datetime::DATE
 """
 
 INSERT_SQL = """
@@ -70,89 +50,47 @@ INSERT_SQL = """
 """
 
 
-def geocode(city, state):
-    state_name = STATE_NAMES.get(state, state)
-    city_title = city.title()
-    for attempt in range(3):
-        try:
-            resp = requests.get(
-                GEOCODE_URL,
-                params={"name": city_title, "count": 10, "language": "en", "format": "json"},
-                timeout=30,
-            )
-            resp.raise_for_status()
-            break
-        except requests.exceptions.Timeout:
-            if attempt == 2:
-                raise
-            log.warning("Geocoding timeout for %s, retrying (%d/3)...", city_title, attempt + 2)
-    results = resp.json().get("results", [])
-    if not results:
-        log.warning("Geocoding found no results for %s, %s", city_title, state_name)
-        return None, None
-    for r in results:
-        if r.get("admin1", "").lower() == state_name.lower() and r.get("country_code") == "US":
-            return round(r["latitude"], 4), round(r["longitude"], 4)
-    for r in results:
-        if r.get("country_code") == "US":
-            log.warning("No exact state match for %s, %s — using %s, %s", city_title, state_name, r["name"], r.get("admin1"))
-            return round(r["latitude"], 4), round(r["longitude"], 4)
-    log.warning("Geocoding found no US results for %s, %s", city_title, state_name)
-    return None, None
-
-
-def fetch_weather(lat, lon, encounter_date):
-    dt = datetime(encounter_date.year, encounter_date.month, encounter_date.day)
+def fetch_weather(lat, lon, target_date):
+    prev_date = target_date - timedelta(days=1)
+    start_dt = datetime(prev_date.year, prev_date.month, prev_date.day)
+    end_dt   = datetime(target_date.year, target_date.month, target_date.day)
     point = Point(lat, lon)
-    data = Daily(point, dt, dt).fetch()
+    data = Daily(point, start_dt, end_dt).fetch()
     if data.empty:
         return []
-    row = data.iloc[0]
-    return [(
-        lat, lon, encounter_date,
-        row.get("tavg"), row.get("tmin"), row.get("tmax"),
-        row.get("prcp"), row.get("pres"),
-    )]
+    rows = []
+    for ts, row in data.iterrows():
+        row_date = ts.date() if hasattr(ts, "date") else ts
+        rows.append((
+            lat, lon, row_date,
+            row.get("tavg"), row.get("tmin"), row.get("tmax"),
+            row.get("prcp"), row.get("pres"),
+        ))
+    return rows
 
 
 def main():
     conn = get_connection()
 
     with conn.cursor() as cur:
-        cur.execute(ENCOUNTER_DATES_SQL, (TODAY,))
+        cur.execute(CONDITION_DATES_SQL, (TODAY,))
         rows_in = cur.fetchall()
 
-    log.info("Found %d unique encounter dates to fetch weather for", len(rows_in))
+    log.info("Found %d unique condition onset dates to fetch weather for", len(rows_in))
 
-    coords_cache = {}
-    total_rows   = 0
+    total_rows = 0
 
-    for i, (org_id, city, state, encounter_date) in enumerate(rows_in, 1):
-        log.info("[%d/%d] %s, %s on %s", i, len(rows_in), city, state, encounter_date)
-
-        if org_id not in coords_cache:
-            lat, lon = geocode(city, state)
-            if lat is None:
-                coords_cache[org_id] = (None, None)
-                continue
-            coords_cache[org_id] = (lat, lon)
-            with conn.cursor() as cur:
-                cur.execute(INSERT_ORG_LOCATION_SQL, (org_id, lat, lon))
-            conn.commit()
-        else:
-            lat, lon = coords_cache[org_id]
-
-        if lat is None:
-            continue
+    for i, (org_id, city, state, lat, lon, onset_date) in enumerate(rows_in, 1):
+        log.info("[%d/%d] %s, %s (%.4f, %.4f) on %s (+ prev day)", i, len(rows_in), city, state, lat, lon, onset_date)
 
         try:
-            rows = fetch_weather(lat, lon, encounter_date)
+            rows = fetch_weather(lat, lon, onset_date)
         except Exception as exc:
-            log.warning("Weather fetch failed for %s, %s on %s: %s", city, state, encounter_date, exc)
+            log.warning("Weather fetch failed for %s, %s on %s: %s", city, state, onset_date, exc)
             continue
 
         if not rows:
-            log.warning("No weather data for %s, %s on %s", city, state, encounter_date)
+            log.warning("No weather data for %s, %s on %s", city, state, onset_date)
             continue
 
         execute_values(conn, INSERT_SQL, rows)
