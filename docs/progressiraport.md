@@ -4,12 +4,12 @@
 
 -  [arhitektuur.md](/docs/arhitektuur.md) failis on kirjeldatud andmevoo diagramm, andmeallikad, täheskeemi realisatsioon ning faktitabelite granulaarsus
 - [readme.md](/README.md) failis on kirjeldatud projektitöö äriküsimus, mõõdikud ehk tulevased visuaalid, andmeallikad, projekti struktuur, panustatav meeskond 
--  [ ] Docker kompose käivitab kõik teenused
-- [ ] Andmeid saadakse allikast kätte
-- [ ] Andmed laetakse `staging` kihti
-- [ ] Vähemalt üks transformatsioon toimib
-- [ ] Vähemalt üks näidikulaud on nähtaval
-- [ ] Vähemalt üks andmekvaliteedi test läbib
+-  [docker-compose.yml](/docker-compose.yml) käivitab kõik teenused – Synthea, PostgreSQL, Airflow ja Superset.
+- Andmed pärinevad kolmest allikast: patsiendid parsitakse Synthea genereeritud JSON-failidest, ilmaandmed Meteostat API-st ja kroonilised ning valuga seotud haigused [icd_snomed.csv-st](/ingestion/icd_snomed.csv).
+- Andmed laaditakse staging-kihti: toored andmed laaditakse PostgreSQL raw-skeemi, kust need transformeeritakse dbt staging-mudelitega raw_staging-skeemi.
+- Vähemalt üks transformatsioon toimib: transformatsioonid toimivad — dbt jooksutab edukalt 14 mudelit (6 staging + 8 marts).
+- Vähemalt üks näidikulaud on nähtaval: Superset dashboard on olemas 
+- Vähemalt üks andmekvaliteedi test läbib: dbt käivitab 26 andmekvaliteedi testi (unikaalsus ja mitte-null) kõikide staging ja marts mudelite võtmeveergudel — kõik läbivad.
 
 
 ## Järgmised sammud
