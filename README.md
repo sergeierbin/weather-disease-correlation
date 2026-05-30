@@ -156,7 +156,6 @@ weather-disease-correlation/
 ├── .env.example                # Mall — täida ja kopeeri .env-iks
 ├── docker-compose.yml          # Kõik teenused: Postgres, Airflow, Superset, Synthea
 ├── RUNBOOK.md                  # Käivitusjuhend algusest lõpuni
-├── andmekihid.md               # Andmemudeli kirjeldus kihtide kaupa
 ├── README.md                   # Projekti dokumentatsioon
 │
 ├── docs/                       # Skeemid ja diagrammid
@@ -173,7 +172,7 @@ weather-disease-correlation/
 │   ├── icd_snomed.csv          # ICD-10 ↔ SNOMED koodide tabel (käsitsi koostatud)
 │   ├── fetch_synthea.py        # FHIR JSON → raw.patients / encounters / conditions
 │   ├── fetch_icd_codes.py      # icd_snomed.csv → raw.icd10_codes
-│   ├── fetch_weather.py        # Meteostat → raw.weather; Open-Meteo → raw.organization_locations
+│   ├── fetch_weather.py        # Meteostat → raw.weather
 │   └── utils/
 │       ├── __init__.py
 │       ├── db.py               # PostgreSQL ühenduse abifunktsioonid
@@ -190,7 +189,6 @@ weather-disease-correlation/
 │       │   ├── stg_encounters.sql
 │       │   ├── stg_conditions.sql
 │       │   ├── stg_organizations.sql
-│       │   ├── stg_organization_locations.sql
 │       │   ├── stg_weather.sql
 │       │   └── stg_icd_codes.sql
 │       │
@@ -200,7 +198,7 @@ weather-disease-correlation/
 │           ├── dim_diagnosis.sql
 │           ├── dim_date.sql
 │           ├── dim_region.sql
-│           ├── dim_weather_category.sql
+│           ├── dim_weather_type.sql
 │           ├── fct_patient_day.sql
 │           ├── fct_patient_weather_region.sql
 │           └── fct_weather_region_day.sql
@@ -208,7 +206,7 @@ weather-disease-correlation/
 ├── superset/
 │   ├── init_superset.sh        # Seadistab Superseti ja impordib dashboardi
 │   └── dashboards/
-│       └── dashboard_export.zip
+│       └── krooniliste_haiguste_ja_ilma_analuus.zip
 │
 ├── notebooks/
 │   └── analüüs.ipynb           # Detailne andmeanalüüs
