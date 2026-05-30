@@ -112,6 +112,7 @@ def main():
 
     if all_rows:
         execute_values(conn, INSERT_SQL, all_rows)
+        conn.commit()
     log.info("Done — %d total rows loaded into raw.weather", len(all_rows))
     conn.close()
 

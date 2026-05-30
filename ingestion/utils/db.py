@@ -20,7 +20,7 @@ def get_connection():
 
 def execute_values(conn, sql, rows):
     # execute_values sends all rows in a single round-trip, much faster than
-    # calling cursor.execute() in a loop for large datasets
+    # calling cursor.execute() in a loop for large datasets.
+    # The caller is responsible for committing the transaction.
     with conn.cursor() as cur:
         psycopg2.extras.execute_values(cur, sql, rows)
-    conn.commit()

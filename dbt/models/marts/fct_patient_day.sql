@@ -1,3 +1,5 @@
+{{ config(materialized='incremental', unique_key='patient_day_key') }}
+
 WITH condition_days AS (
     SELECT
         c.patient_id,
@@ -57,9 +59,13 @@ aggregated AS (
 SELECT
     MD5(patient_key::text || '|' || onset_date::text || '|' || region_key::text) AS patient_day_key,
     patient_key,
+    onset_date,
     date_key,
     region_key,
     weather_type_key,
     disease_event_count,
     rainy_day_flag
 FROM aggregated
+{% if is_incremental() %}
+WHERE onset_date > (SELECT MAX(onset_date) FROM {{ this }})
+{% endif %}

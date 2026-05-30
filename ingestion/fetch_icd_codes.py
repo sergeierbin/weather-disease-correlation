@@ -38,6 +38,7 @@ def main():
     conn = get_connection()
     try:
         execute_values(conn, INSERT_SQL, rows)
+        conn.commit()
         log.info("Loaded %d rows into raw.icd10_codes", len(rows))
     finally:
         conn.close()

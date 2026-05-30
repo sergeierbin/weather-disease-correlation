@@ -1,5 +1,5 @@
 SELECT
-    ROW_NUMBER() OVER (ORDER BY state, city, organization_id) AS region_key,
+    MD5(organization_id) AS region_key,
     organization_id,
     city,
     state,

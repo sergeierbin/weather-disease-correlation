@@ -212,6 +212,7 @@ def flush_batch(conn, patients, encounters, organizations, conditions):
     execute_values(conn, ORGANIZATIONS_SQL, organizations)
     execute_values(conn, ENCOUNTERS_SQL,    encounters)
     execute_values(conn, CONDITIONS_SQL,    conditions)
+    conn.commit()
 
     return len(patients), len(encounters), len(organizations), len(conditions)
 
@@ -240,6 +241,7 @@ def main():
                 log.warning("Skipping %s: %s", path.name, exc)
         if hospital_orgs:
             execute_values(conn, ORGANIZATIONS_SQL, hospital_orgs)
+            conn.commit()
             log.info("Loaded %d rows → raw.organizations (hospital bundles)", len(hospital_orgs))
 
         # Pass 2: patient bundles in batches of FHIR_BATCH_SIZE

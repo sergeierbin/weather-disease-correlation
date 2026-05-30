@@ -15,18 +15,34 @@ Steps:
 
 from __future__ import annotations
 
+import os
 from datetime import datetime, timedelta
 
 from airflow import DAG
 from airflow.operators.bash import BashOperator
 
+# ── Failure callback ─────────────────────────────────────────────────────────
+
+def on_failure(context):
+    """Logs a prominent message on task failure. Airflow also sends email if SMTP is configured."""
+    ti = context["task_instance"]
+    log = context["task"].log
+    log.error(
+        "TASK FAILED — dag: %s  task: %s  run: %s",
+        ti.dag_id, ti.task_id, ti.run_id,
+    )
+
 # ── Default task settings ────────────────────────────────────────────────────
+
+_alert_email = os.environ.get("AIRFLOW_SMTP_MAIL_FROM") or None
 
 default_args = {
     "owner": "airflow",
-    # Retry once after a 5-minute wait before marking the task as failed
     "retries": 1,
     "retry_delay": timedelta(minutes=5),
+    "on_failure_callback": on_failure,
+    "email_on_failure": bool(_alert_email),
+    "email": [_alert_email] if _alert_email else [],
 }
 
 # ── DAG definition ───────────────────────────────────────────────────────────

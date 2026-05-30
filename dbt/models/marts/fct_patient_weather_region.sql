@@ -1,3 +1,5 @@
+{{ config(materialized='incremental', unique_key='patient_weather_region_key') }}
+
 WITH conditions_with_encounter AS (
     SELECT
         c.condition_id,
@@ -10,6 +12,9 @@ WITH conditions_with_encounter AS (
         e.organization_id
     FROM {{ ref('stg_conditions') }} c
     LEFT JOIN {{ ref('stg_encounters') }} e ON e.encounter_id = c.encounter_id
+    {% if is_incremental() %}
+    WHERE c.onset_datetime::DATE > (SELECT MAX(onset_datetime) FROM {{ this }})
+    {% endif %}
 ),
 
 with_patient AS (
@@ -23,7 +28,9 @@ with_patient AS (
 with_region AS (
     SELECT
         wp.*,
-        r.region_key
+        r.region_key,
+        r.latitude,
+        r.longitude
     FROM with_patient wp
     LEFT JOIN {{ ref('dim_region') }} r
         ON r.organization_id = wp.organization_id
@@ -42,10 +49,8 @@ with_weather AS (
         wd.*,
         wc.weather_type_key
     FROM with_date wd
-    LEFT JOIN {{ ref('dim_region') }} r2
-        ON r2.organization_id = wd.organization_id
     LEFT JOIN {{ ref('stg_weather') }} w
-        ON w.lat = r2.latitude AND w.lon = r2.longitude AND w.weather_date = wd.onset_datetime
+        ON w.lat = wd.latitude AND w.lon = wd.longitude AND w.weather_date = wd.onset_datetime
     LEFT JOIN {{ ref('dim_weather_type') }} wc
         ON wc.weather_type IS NOT DISTINCT FROM CASE
             WHEN w.prcp > 0 AND w.pres_drop THEN 'vihm_rohulangusega'

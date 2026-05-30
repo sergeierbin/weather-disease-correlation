@@ -14,7 +14,7 @@ WITH categorized AS (
 )
 
 SELECT
-    ROW_NUMBER() OVER (ORDER BY weather_type, temperature_band) AS weather_type_key,
+    MD5(weather_type || '|' || COALESCE(temperature_band, '')) AS weather_type_key,
     weather_type IN ('vihm_rohulangusega', 'vihm_ilma_rohulanguseta') AS rain_flag,
     weather_type = 'vihm_rohulangusega'                               AS pressure_drop_flag,
     weather_type,

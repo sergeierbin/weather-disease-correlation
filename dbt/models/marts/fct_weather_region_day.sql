@@ -1,3 +1,5 @@
+{{ config(materialized='incremental', unique_key='weather_region_day_key') }}
+
 WITH weather_with_region AS (
     SELECT
         w.weather_date,
@@ -42,7 +44,8 @@ with_keys AS (
 )
 
 SELECT
-    ROW_NUMBER() OVER (ORDER BY region_key, weather_date) AS weather_region_day_key,
+    MD5(region_key || '|' || weather_date::text) AS weather_region_day_key,
+    weather_date,
     date_key,
     region_key,
     weather_type_key,
@@ -53,3 +56,6 @@ SELECT
     prcp = 0         AS clear_day_flag,
     pres_drop        AS pressure_drop_flag
 FROM with_keys
+{% if is_incremental() %}
+WHERE weather_date > (SELECT MAX(weather_date) FROM {{ this }})
+{% endif %}
