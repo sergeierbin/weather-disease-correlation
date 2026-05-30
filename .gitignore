@@ -23,10 +23,6 @@ airflow/logs/
 dist/
 build/
 
-# ── Jupyter ──────────────────────────────────────────────────────────────────
-# notebooks/ tracked in git
-notebooks/.ipynb_checkpoints/
-
 # ── OS ───────────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
