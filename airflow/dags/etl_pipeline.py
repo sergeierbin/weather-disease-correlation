@@ -92,15 +92,16 @@ with DAG(
     # Executes the full dbt lineage:
     #   raw → staging (views) → intermediate (views) → marts (tables)
     # Must run after all ingestion tasks so the raw schema is fully populated.
+    _dbt = (
+        "/home/airflow/.local/bin/dbt"
+        " --project-dir /opt/airflow/dbt"
+        " --profiles-dir /opt/airflow/dbt"
+        " --log-path /tmp/dbt_logs"
+        " --target-path /tmp/dbt_target"
+    )
     dbt_run = BashOperator(
         task_id="dbt_run",
-        bash_command=(
-            "/home/airflow/.local/bin/dbt run "
-            "--project-dir /opt/airflow/dbt "
-            "--profiles-dir /opt/airflow/dbt "
-            "--log-path /tmp/dbt_logs "
-            "--target-path /tmp/dbt_target"
-        ),
+        bash_command=f"{_dbt} run && {_dbt} test && {_dbt} source freshness",
         execution_timeout=timedelta(minutes=30),
     )
 

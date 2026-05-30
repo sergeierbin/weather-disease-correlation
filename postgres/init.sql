@@ -90,3 +90,12 @@ CREATE TABLE IF NOT EXISTS raw.icd10_codes (
     loaded_at      TIMESTAMPTZ DEFAULT NOW(),
     PRIMARY KEY (icd10_code, snomed_code)  -- M16 has two SNOMED codes → two rows
 );
+
+-- ── Indexes ───────────────────────────────────────────────────────────────────
+-- FK lookup columns used in dbt JOINs and ingestion scripts.
+-- raw.weather already has a UNIQUE index on (lat, lon, date) from the constraint above.
+
+CREATE INDEX IF NOT EXISTS idx_conditions_encounter_id ON raw.conditions (encounter_id);
+CREATE INDEX IF NOT EXISTS idx_conditions_patient_id   ON raw.conditions (patient_id);
+CREATE INDEX IF NOT EXISTS idx_encounters_organization ON raw.encounters (organization_id);
+CREATE INDEX IF NOT EXISTS idx_organizations_lat_lon   ON raw.organizations (lat, lon);

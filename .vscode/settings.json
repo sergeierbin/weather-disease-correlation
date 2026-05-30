@@ -1,0 +1,9 @@
+{
+  "sql.linter.driver": "PostgreSQL",
+  "sql-formatter.dialect": "postgresql",
+  "editor.formatOnSave": false,
+  "mssql.intelliSense.enableIntellisense": false,
+  "[sql]": {
+    "editor.semanticHighlighting.enabled": false
+  }
+}

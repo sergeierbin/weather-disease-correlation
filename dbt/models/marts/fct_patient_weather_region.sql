@@ -13,7 +13,7 @@ WITH conditions_with_encounter AS (
     FROM {{ ref('stg_conditions') }} c
     LEFT JOIN {{ ref('stg_encounters') }} e ON e.encounter_id = c.encounter_id
     {% if is_incremental() %}
-    WHERE c.onset_datetime::DATE > (SELECT MAX(onset_datetime) FROM {{ this }})
+    WHERE c.onset_datetime::DATE > (SELECT MAX(onset_datetime) FROM {{ this }}) - INTERVAL '7 days'
     {% endif %}
 ),
 

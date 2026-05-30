@@ -67,5 +67,5 @@ SELECT
     rainy_day_flag
 FROM aggregated
 {% if is_incremental() %}
-WHERE onset_date > (SELECT MAX(onset_date) FROM {{ this }})
+WHERE onset_date > (SELECT MAX(onset_date) FROM {{ this }}) - INTERVAL '7 days'
 {% endif %}

@@ -57,5 +57,5 @@ SELECT
     pres_drop        AS pressure_drop_flag
 FROM with_keys
 {% if is_incremental() %}
-WHERE weather_date > (SELECT MAX(weather_date) FROM {{ this }})
+WHERE weather_date > (SELECT MAX(weather_date) FROM {{ this }}) - INTERVAL '7 days'
 {% endif %}
