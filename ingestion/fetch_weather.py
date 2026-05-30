@@ -2,18 +2,17 @@
 # and loads them into raw.weather.
 #
 # Strategy:
-#   1. Query raw.conditions + raw.encounters + raw.organizations + raw.organization_locations
+#   1. Query raw.conditions + raw.encounters + raw.organizations
 #      to find each unique (organisation, lat, lon, onset_date) combination.
-#   2. For each onset date, fetch weather for that day AND the previous day.
-#   3. Fetch daily historical weather from Meteostat for each location and date.
-#   4. Upsert rows into raw.weather (safe to re-run; duplicates are ignored).
-#
-# Coordinates come directly from raw.organization_locations, which is populated by
-# fetch_synthea.py from the Location resources in the hospitalInformation FHIR bundles.
+#   2. Group by (lat, lon) and fetch one date range per location
+#      (min(onset_dates)-1 through max(onset_dates)) — avoids N API calls
+#      per location when the same site has many condition onset dates.
+#   3. Upsert rows into raw.weather (safe to re-run; duplicates are ignored).
 
 import os
 import sys
 import logging
+from collections import defaultdict
 from datetime import date, datetime, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -50,12 +49,11 @@ INSERT_SQL = """
 """
 
 
-def fetch_weather(lat, lon, target_date):
-    prev_date = target_date - timedelta(days=1)
-    start_dt = datetime(prev_date.year, prev_date.month, prev_date.day)
-    end_dt   = datetime(target_date.year, target_date.month, target_date.day)
-    point = Point(lat, lon)
-    data = Daily(point, start_dt, end_dt).fetch()
+def fetch_weather(lat, lon, start, end):
+    """Fetch all daily weather rows for (lat, lon) between start and end (inclusive)."""
+    start_dt = datetime(start.year, start.month, start.day)
+    end_dt   = datetime(end.year, end.month, end.day)
+    data = Daily(Point(lat, lon), start_dt, end_dt).fetch()
     if data.empty:
         return []
     rows = []
@@ -69,6 +67,17 @@ def fetch_weather(lat, lon, target_date):
     return rows
 
 
+def group_dates_by_location(rows_in):
+    """Return {(lat, lon): set_of_onset_dates} and {(lat, lon): (city, state)}."""
+    loc_dates = defaultdict(set)
+    loc_meta  = {}
+    for _org_id, city, state, lat, lon, onset_date in rows_in:
+        key = (lat, lon)
+        loc_dates[key].add(onset_date)
+        loc_meta[key] = (city, state)
+    return loc_dates, loc_meta
+
+
 def main():
     conn = get_connection()
 
@@ -76,27 +85,34 @@ def main():
         cur.execute(CONDITION_DATES_SQL, (TODAY,))
         rows_in = cur.fetchall()
 
-    log.info("Found %d unique condition onset dates to fetch weather for", len(rows_in))
+    loc_dates, loc_meta = group_dates_by_location(rows_in)
+    log.info(
+        "Found %d unique (location, date) combos across %d locations",
+        len(rows_in), len(loc_dates),
+    )
 
-    total_rows = 0
-
-    for i, (org_id, city, state, lat, lon, onset_date) in enumerate(rows_in, 1):
-        log.info("[%d/%d] %s, %s (%.4f, %.4f) on %s (+ prev day)", i, len(rows_in), city, state, lat, lon, onset_date)
-
+    all_rows = []
+    for i, ((lat, lon), dates) in enumerate(loc_dates.items(), 1):
+        city, state = loc_meta[(lat, lon)]
+        start = min(dates) - timedelta(days=1)
+        end   = max(dates)
+        log.info(
+            "[%d/%d] %s, %s (%.4f, %.4f) %s→%s (%d onset dates)",
+            i, len(loc_dates), city, state, lat, lon, start, end, len(dates),
+        )
         try:
-            rows = fetch_weather(lat, lon, onset_date)
+            rows = fetch_weather(lat, lon, start, end)
         except Exception as exc:
-            log.warning("Weather fetch failed for %s, %s on %s: %s", city, state, onset_date, exc)
+            log.warning("Weather fetch failed for %s, %s: %s", city, state, exc)
             continue
-
         if not rows:
-            log.warning("No weather data for %s, %s on %s", city, state, onset_date)
+            log.warning("No weather data for %s, %s", city, state)
             continue
+        all_rows.extend(rows)
 
-        execute_values(conn, INSERT_SQL, rows)
-        total_rows += len(rows)
-
-    log.info("Done — %d total rows loaded into raw.weather", total_rows)
+    if all_rows:
+        execute_values(conn, INSERT_SQL, all_rows)
+    log.info("Done — %d total rows loaded into raw.weather", len(all_rows))
     conn.close()
 
 

@@ -55,12 +55,11 @@ aggregated AS (
 )
 
 SELECT
-    ROW_NUMBER() OVER (ORDER BY patient_key, onset_date, region_key) AS patient_day_key,
+    MD5(patient_key::text || '|' || onset_date::text || '|' || region_key::text) AS patient_day_key,
     patient_key,
     date_key,
     region_key,
     weather_type_key,
     disease_event_count,
-    TRUE         AS pain_related_flag,
     rainy_day_flag
 FROM aggregated

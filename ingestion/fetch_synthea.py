@@ -28,6 +28,9 @@ FHIR_DIR = Path(os.environ.get("FHIR_DIR", "/opt/airflow/synthea_output/fhir"))
 # Max number of patient files to process — 0 means no limit (override with FHIR_LIMIT env var)
 FHIR_LIMIT = int(os.environ.get("FHIR_LIMIT", "0"))
 
+# Number of patient files to accumulate before each DB insert (override with FHIR_BATCH_SIZE env var)
+FHIR_BATCH_SIZE = int(os.environ.get("FHIR_BATCH_SIZE", "100"))
+
 
 # ── FHIR helpers ──────────────────────────────────────────────────────────────
 
@@ -189,6 +192,29 @@ CONDITIONS_SQL = """
     ON CONFLICT (condition_id) DO NOTHING
 """
 
+# ── Batch flusher ─────────────────────────────────────────────────────────────
+
+def flush_batch(conn, patients, encounters, organizations, conditions):
+    """Insert one batch in FK dependency order. Returns (n_pat, n_enc, n_org, n_cond)."""
+    # Null out encounter_id on conditions that reference filtered-out encounters
+    kept_enc_ids = {e[0] for e in encounters}
+    conditions = [
+        (c[0], c[1], c[2] if c[2] in kept_enc_ids else None, *c[3:])
+        for c in conditions
+    ]
+
+    # Drop patient-bundle org duplicates not linked to any encounter in this batch;
+    # hospital-bundle orgs are already committed before patient batches start.
+    kept_org_ids = {e[4] for e in encounters if e[4] is not None}
+    organizations = [o for o in organizations if o[0] in kept_org_ids]
+
+    execute_values(conn, PATIENTS_SQL,      patients)
+    execute_values(conn, ORGANIZATIONS_SQL, organizations)
+    execute_values(conn, ENCOUNTERS_SQL,    encounters)
+    execute_values(conn, CONDITIONS_SQL,    conditions)
+
+    return len(patients), len(encounters), len(organizations), len(conditions)
+
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main():
@@ -199,64 +225,66 @@ def main():
 
     log.info("Found %d FHIR bundle files in %s", len(files), FHIR_DIR)
 
-    all_patients      = []
-    all_encounters    = []
-    all_organizations = []
-    all_conditions    = []
-
-    patient_count = 0
-    for path in files:
-        try:
-            if path.stem.startswith("hospitalInformation"):
-                # Hospital bundles contain Organization and Location resources
-                _, _, o, _ = parse_bundle(path)
-                all_organizations.extend(o)
-            elif path.stem.startswith("practitionerInformation"):
-                continue
-            else:
-                if FHIR_LIMIT and patient_count >= FHIR_LIMIT:
-                    continue
-                p, e, o, c = parse_bundle(path)
-                all_patients.extend(p)
-                all_encounters.extend(e)
-                all_organizations.extend(o)
-                all_conditions.extend(c)
-                patient_count += 1
-        except Exception as exc:
-            log.warning("Skipping %s: %s", path.name, exc)
-
-    # Null out encounter_id on conditions that reference filtered-out encounters
-    kept_encounter_ids = {e[0] for e in all_encounters}
-    all_conditions = [
-        (c[0], c[1], c[2] if c[2] in kept_encounter_ids else None, *c[3:])
-        for c in all_conditions
-    ]
-
-    # Keep only organizations linked to a relevant encounter
-    kept_org_ids = {e[4] for e in all_encounters if e[4] is not None}  # organization_id
-    all_organizations = [o for o in all_organizations if o[0] in kept_org_ids]
-
-    log.info(
-        "Parsed %d patients, %d encounters, %d organizations, %d conditions",
-        len(all_patients), len(all_encounters), len(all_organizations), len(all_conditions),
-    )
-
     conn = get_connection()
     try:
-        # Insert in FK dependency order: patients and organizations first, then encounters, then conditions
-        execute_values(conn, PATIENTS_SQL,      all_patients)
-        log.info("Loaded %d rows → raw.patients", len(all_patients))
+        # Pass 1: hospital bundles — insert all org+location rows upfront so FK
+        # constraints are satisfied before any patient encounter is committed.
+        hospital_orgs = []
+        for path in files:
+            if not path.stem.startswith("hospitalInformation"):
+                continue
+            try:
+                _, _, o, _ = parse_bundle(path)
+                hospital_orgs.extend(o)
+            except Exception as exc:
+                log.warning("Skipping %s: %s", path.name, exc)
+        if hospital_orgs:
+            execute_values(conn, ORGANIZATIONS_SQL, hospital_orgs)
+            log.info("Loaded %d rows → raw.organizations (hospital bundles)", len(hospital_orgs))
 
-        execute_values(conn, ORGANIZATIONS_SQL, all_organizations)
-        log.info("Loaded %d rows → raw.organizations", len(all_organizations))
+        # Pass 2: patient bundles in batches of FHIR_BATCH_SIZE
+        patients, encounters, organizations, conditions = [], [], [], []
+        patient_count  = 0
+        total_patients = total_encounters = total_organizations = total_conditions = 0
 
-        execute_values(conn, ENCOUNTERS_SQL,    all_encounters)
-        log.info("Loaded %d rows → raw.encounters", len(all_encounters))
+        for path in files:
+            if path.stem.startswith("hospitalInformation") or path.stem.startswith("practitionerInformation"):
+                continue
+            if FHIR_LIMIT and patient_count >= FHIR_LIMIT:
+                break
+            try:
+                p, e, o, c = parse_bundle(path)
+                patients.extend(p)
+                encounters.extend(e)
+                organizations.extend(o)
+                conditions.extend(c)
+                patient_count += 1
+            except Exception as exc:
+                log.warning("Skipping %s: %s", path.name, exc)
+                continue
 
-        execute_values(conn, CONDITIONS_SQL,    all_conditions)
-        log.info("Loaded %d rows → raw.conditions", len(all_conditions))
+            if patient_count % FHIR_BATCH_SIZE == 0:
+                np, ne, no, nc = flush_batch(conn, patients, encounters, organizations, conditions)
+                log.info("Batch %d/%d flushed — %d patients, %d encounters, %d orgs, %d conditions",
+                         patient_count // FHIR_BATCH_SIZE,
+                         (len(files) // FHIR_BATCH_SIZE) or 1,
+                         np, ne, no, nc)
+                total_patients += np; total_encounters += ne
+                total_organizations += no; total_conditions += nc
+                patients, encounters, organizations, conditions = [], [], [], []
+
+        # Flush the final partial batch
+        if patients or encounters or organizations or conditions:
+            np, ne, no, nc = flush_batch(conn, patients, encounters, organizations, conditions)
+            total_patients += np; total_encounters += ne
+            total_organizations += no; total_conditions += nc
+
+        log.info(
+            "Done — %d patients, %d encounters, %d organizations, %d conditions",
+            total_patients, total_encounters, total_organizations, total_conditions,
+        )
     finally:
-        conn.close()  # Always close, even if an insert raises
+        conn.close()
 
 if __name__ == "__main__":
     main()

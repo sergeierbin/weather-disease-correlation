@@ -50,6 +50,7 @@ with DAG(
     ingest_synthea = BashOperator(
         task_id="ingest_synthea",
         bash_command="python /opt/airflow/ingestion/fetch_synthea.py",
+        execution_timeout=timedelta(hours=1),
     )
 
     # ── Step 2: ingest ICD-10 / SNOMED mapping ───────────────────────────────
@@ -58,6 +59,7 @@ with DAG(
     ingest_icd_codes = BashOperator(
         task_id="ingest_icd_codes",
         bash_command="python /opt/airflow/ingestion/fetch_icd_codes.py",
+        execution_timeout=timedelta(minutes=10),
     )
 
     # ── Step 3: ingest weather ───────────────────────────────────────────────
@@ -67,6 +69,7 @@ with DAG(
     ingest_weather = BashOperator(
         task_id="ingest_weather",
         bash_command="python /opt/airflow/ingestion/fetch_weather.py",
+        execution_timeout=timedelta(hours=2),
     )
 
     # ── Step 4: run all dbt models ───────────────────────────────────────────
@@ -82,6 +85,7 @@ with DAG(
             "--log-path /tmp/dbt_logs "
             "--target-path /tmp/dbt_target"
         ),
+        execution_timeout=timedelta(minutes=30),
     )
 
     # ── Task dependencies ─────────────────────────────────────────────────────

@@ -68,7 +68,7 @@ with_diagnosis AS (
 )
 
 SELECT
-    ROW_NUMBER() OVER (ORDER BY patient_key, onset_datetime, condition_id) AS patient_weather_region_key,
+    MD5(patient_key::text || '|' || onset_datetime::text || '|' || condition_id::text || '|' || COALESCE(diagnosis_key::text, '')) AS patient_weather_region_key,
     patient_key,
     diagnosis_key,
     date_key,
@@ -78,6 +78,5 @@ SELECT
     encounter_id,
     onset_datetime,
     abatement_datetime,
-    TRUE             AS pain_related_flag,
     occurrence_status
 FROM with_diagnosis

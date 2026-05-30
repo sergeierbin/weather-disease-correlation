@@ -3,7 +3,7 @@ version: 2
 models:
   - name: dim_patients
     columns:
-      - name: patient_id
+      - name: patient_key
         data_tests:
           - unique
           - not_null
@@ -13,7 +13,7 @@ models:
       - name: icd10_code
         data_tests:
           - not_null
-      - name: snomed_code
+      - name: condition_code_snomed
         data_tests:
           - not_null
 
@@ -44,17 +44,50 @@ models:
         data_tests:
           - unique
           - not_null
+      - name: patient_key
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_patients')
+              field: patient_key
+      - name: date_key
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_date')
+              field: date_key
+      - name: region_key
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_region')
+              field: region_key
+
+  - name: fct_patient_weather_region
+    columns:
+      - name: patient_weather_region_key
+        data_tests:
+          - unique
+          - not_null
+      - name: patient_key
+        data_tests:
+          - relationships:
+              to: ref('dim_patients')
+              field: patient_key
+      - name: date_key
+        data_tests:
+          - relationships:
+              to: ref('dim_date')
+              field: date_key
+      - name: region_key
+        data_tests:
+          - relationships:
+              to: ref('dim_region')
+              field: region_key
 
   - name: fct_weather_region_day
     columns:
       - name: weather_region_day_key
-        data_tests:
-          - unique
-          - not_null
-
-  - name: fct_patient_weather_region
-    columns:
-      - name: patient_weather_key
         data_tests:
           - unique
           - not_null

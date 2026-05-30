@@ -10,6 +10,12 @@ CREATE SCHEMA IF NOT EXISTS raw;
 CREATE SCHEMA IF NOT EXISTS staging;
 CREATE SCHEMA IF NOT EXISTS marts;
 
+-- dbt appends the profile schema prefix ("raw") to each model schema,
+-- producing raw_staging and raw_marts. Pre-creating them avoids a race
+-- condition where parallel dbt threads try to CREATE SCHEMA simultaneously.
+CREATE SCHEMA IF NOT EXISTS raw_staging;
+CREATE SCHEMA IF NOT EXISTS raw_marts;
+
 -- ── raw schema tables ─────────────────────────────────────────────────────────
 -- Creation order follows FK dependencies:
 --   patients, organizations → encounters → conditions
