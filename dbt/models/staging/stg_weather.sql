@@ -13,7 +13,7 @@ SELECT
     s.pres,
     s.loaded_at,
     prev.pres                    AS pres_prev,
-    prev.pres - s.pres >= 6      AS pres_drop
+    prev.pres - s.pres >= 5      AS pres_drop
 FROM source s
 LEFT JOIN source prev
     ON  prev.lat  = s.lat
