@@ -4,36 +4,79 @@ models:
   - name: stg_patients
     columns:
       - name: patient_id
+        description: "Sünteetilise patsiendi unikaalne identifikaator"
         data_tests:
-          - unique
-          - not_null
+          - unique # kontrollib, et iga patsient on laaditud täpselt üks kord.
+          - not_null # ilma ID-ta ei ole FK seosed usaldusväärsed.
 
   - name: stg_encounters
     columns:
       - name: encounter_id
+        description: "Visiidi unikaalne identifikaator (FHIR ressurss Encounter.id)"
         data_tests:
-          - unique
-          - not_null
+          - unique # kontrollib, et sama visiiti ei laetaks mitu korda
+          - not_null # ilma ID-ta ei saa visiiti seisundiga (condition) siduda
+      - name: patient_id
+        description: "Viide patsiendile, kelle visiidiga on tegemist"
+        data_tests:
+          - not_null # iga visiit peab kuuluma patsiendile
+          - relationships:
+              to: ref('stg_patients')
+              field: patient_id
 
   - name: stg_conditions
     columns:
       - name: condition_id
+        description: "diagnoosi unikaalne identifikaator (FHIR ressurss Condition.id)"
         data_tests:
-          - unique
-          - not_null
+          - unique # sama diagnoosi ei laadita mitu korda
+          - not_null # ilma ID-ta ei saa diagnoosi patsiendi või visiidiga siduda
+      - name: patient_id
+        description: "viide patsiendile, kellele diagnoos kuulub"
+        data_tests:
+          - not_null # iga diagnoos peab kuuluma patsiendile
+          - relationships:
+              to: ref('stg_patients')
+              field: patient_id
+      - name: encounter_id
+        description: "viide visiidile, mille käigus diagnoos pandi"
+        data_tests:
+          - relationships:
+              to: ref('stg_encounters')
+              field: encounter_id
+              config:
+                severity: warn # NULL on lubatud, sest FHIR standard ei nõua, et iga visiidiga seostuks diagnoos.
 
   - name: stg_organizations
     columns:
       - name: organization_id
+        description: "tervishoiuasutuse unikaalne identifikaator (FHIR ressurss Organization.id)"
         data_tests:
-          - unique
+          - unique # sama asutust pole kaks korda laaditud
+          - not_null # ilma ID-ta ei saa asutust visiidi või ilmaandmetega siduda
+
+  - name: stg_weather
+    columns:
+      - name: lat
+        description: "Kasutatakse ilmaandmete sidumiseks asutusega."
+        data_tests:
           - not_null
+      - name: lon
+        description: "Kasutatakse ilmaandmete sidumiseks asutusega."
+        data_tests:
+          - not_null
+      - name: weather_date
+        description: "Ilmavaatluse kuupäev."
+        data_tests:
+          - not_null # ilma kuupäevata ei saa ilmaandmeid sümptomite alguse kuupäevaga siduda
 
   - name: stg_icd_codes
     columns:
       - name: icd10_code
+        description: "WHO ICD-10 diagnoosikood. Üks kood võib vastata mitmele SNOMED koodile."
         data_tests:
-          - not_null
+          - not_null # ilma ICD-10 koodita ei saa diagnoosi klassifitseerida
       - name: snomed_code
+        description: "SNOMED CT kood. Kasutatatkse Synthea tingimuste sidumiseks ICD-10 klassifikaatoriga."
         data_tests:
-          - not_null
+          - not_null # ilma SNOMED koodia ei saa Synthea diagnoose filtreerida
