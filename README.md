@@ -65,6 +65,16 @@ Projekti arhitektuur kujuneb [siin](docs/arhitektuur.md)
 | Ilmastikuandmed   | Meteostat API  | Jah, igapäevaselt | Põhiandmevoog |
 | SNOMED CT - ICD-10 mapping | CSV | Ei, staatiline | Kõrvaltabel   |
 
+### Stack
+
+| Komponent           | Tööriist                             |
+| ------------------- | ------------------------------------ |
+| Sissevõtt           | Python |
+| Orkestreerimine     | Airflow                              |
+| Transformatsioon    | dbt                                  |
+| Andmehoidla         | PostgreSQL                           |
+| Konteineriseerimine | Docker                               |
+| Näidikulaud         | Superset                             |
 
 ### Riskid
 
@@ -128,15 +138,7 @@ Projekt kontrollib järgmist:
 [Test 3 - ]
 Testide tulemused: []
 
-### Stack
 
-| Komponent        | Tööriist   |
-| ---------------- | ---------- |
-| Sissevõtt        | Airflow  |
-| Transformatsioon | dbt      |
-| Andmehoidla      | PostgreSQL |
-| Näidikulaud      | Superset |
-| Orkestreerimine  | Airflow  |
 
 ### Käivitamine
 
