@@ -80,7 +80,42 @@ Projekti arhitektuur kujuneb [siin](docs/arhitektuur.md)
    3. **ICD-10 / SNOMED koodide kaardistus (CSV)** Staatiline icd_snomed.csv fail laetakse fetch_icd_codes.py skriptiga tabelisse raw.icd10_codes. See on viitetabel, mis ei muutu.
    4. **Kõik kolm sissevõtuskripti on idempotentsed** — uuesti käivitamine ei tekita duplikaate (ON CONFLICT DO NOTHING). Andmete sissevõttu orkestreerib Airflow DAG (etl_pipeline). Synthea FHIR JSON-failid ja ICD-10 koodid laetakse paralleelselt, seejärel päritakse Meteostat API kaudu ilmaandmed kõigi asukohafailide koordinaatidele. DAG käivitub käsitsi (manuaalne trigger).
 2. Laadimine — Andmed laaditakse staging kihti
-3. Transformatsioon — [Kirjelda peamised arvutused ja mudelid]
+   Airflow DAG laadib kõigepealt andmed `raw`-skeemi (kolm paralleelset sissevõtuskripti). Seejärel käivitab dbt staging kihi mudelid, mis loevad `raw`-tabelist ja loovad puhastatud vaated `staging`-skeemis.
+
+   | Staging mudel | Raw allikas | Peamised muutused |
+   |---|---|---|
+   | `stg_patients` | `raw.patients` | `id` → `patient_id` |
+   | `stg_encounters` | `raw.encounters` | veergude ümbernimetamine |
+   | `stg_conditions` | `raw.conditions` | kõik diagnostikaväljad säilitatakse |
+   | `stg_organizations` | `raw.organizations` | `id` → `organization_id` |
+   | `stg_weather` | `raw.weather` | `NaN` → `NULL`; lisatakse `pres_prev` ja `pres_drop` (rõhu langus ≥5 ühikut) |
+   | `stg_icd_codes` | `raw.icd10_codes` | ICD-10 / SNOMED kaardistus |
+
+   Staging mudelid on dbt **vaated** (mitte tabelid) — andmeid ei kopeerita, SQL käivitatakse päringu ajal. Kõigil mudelitel on andmekvaliteedi testid (unikaalsus, not null, FK suhted).
+3. Transformatsioon — dbt transformeerib `staging`-kihi andmed tähtskeemi (star schema) `marts`-kihis.
+
+   **Dimensioonitabelid (5 tk):**
+
+   | Mudel | Allikas | Sisu |
+   |---|---|---|
+   | `dim_date` | `stg_conditions` | Kuupäevaspain haiguste alguskuupäevast tänaseni; `date_key` = YYYYMMDD |
+   | `dim_patients` | `stg_patients` | Patsiendid; `patient_key` = MD5(patient_id) |
+   | `dim_region` | `stg_organizations` | Asukohad koordinaatidega; `region_key` = MD5(organization_id) |
+   | `dim_diagnosis` | `stg_icd_codes` | ICD-10 / SNOMED kaardistus; `diagnosis_key` = MD5(icd10_code \|\| snomed_code) |
+   | `dim_weather_type` | `stg_weather` | Ilmatüüp: sademete ja rõhulanguse kombinatsioon + temperatuurivahemik (`külm`/`soe`) |
+
+   **Faktitabelid (3 tk, kõik inkrementaalsed):**
+
+   | Mudel | Granulariteet | Peamised arvutused |
+   |---|---|---|
+   | `fct_patient_day` | patsient × päev × piirkond | haigussündmuste arv päevas; vihmasajupäeva lipp |
+   | `fct_patient_weather_region` | üksik haigusseisund | iga diagnoos koos ilma- ja asukohakontekstiga |
+   | `fct_weather_region_day` | piirkond × päev | ilmakokkuvõte piirkonniti: sademed, temperatuur, rõhk, rõhulanguse lipp |
+
+   **Olulisemad arvutused:**
+   - Surrogaatvõtmed: kõik dimensioonid ja faktid kasutavad MD5-räsi loomulikest võtmetest
+   - Ilmastiku geograafiline sidumine: ilmaandmed seotakse patsientidega läbi `raw.organizations` koordinaatide (lat/lon)
+   - Rõhulanguse lipp: arvutatakse staging-kihis — kui rõhk langes eelmisest päevast ≥5 hPa, on `pres_drop = TRUE`
 4. Testimine — [Mitu] andmekvaliteedi testi kontrollivad korrektsust
 5. Näidikulaud — [Kirjelda lühidalt, mida näidikulaud näitab]
 
