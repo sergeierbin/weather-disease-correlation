@@ -283,7 +283,17 @@ weather-disease-correlation/
 ### Kokkuvõte, puudused ja võimalikud edasiarendused 
 
 **Kokkuvõte:**
-- [Loetle, mis on lõpule viidud, mis töötab hästi]
+- Synthea genereerib sünteetilised terviseandmed FHIR R4 formaadis
+- Kolm sissevõtuskripti töötavad: Synthea FHIR JSON parsimine, Meteostat ilmaandmete pärimine ja ICD-10/SNOMED CSV laadimine — kõik idempotentsed
+- Airflow DAG orkestreerib kogu andmevoo (sissevõtt → ilm → dbt) õiges järjekorras
+- dbt staging kiht (6 mudelit) puhastab ja standardiseerib kõik toored andmed
+- dbt marts kiht: 5 dimensioonitabelit + 3 faktitabelit tähtskeemina
+- Inkrementaalne laadimine faktitabelites (`loaded_at`-põhine filter)
+- Ilmastikuandmete geograafiline sidumine patsiendiandmetega lat/lon kaudu
+- Rõhulanguse (`pres_drop`) ja ilmatüübi (`dim_weather_type`) klassifikatsioon
+- Andmekvaliteedi testid: ...
+- dbt docs genereeritakse automaatselt pärast iga käivitust
+- Superset näidikulaud visualiseerib tulemusi
 
 **Puudused:**
 - [Loetle ausalt, mis jäi tegemata - see ei mõjuta hinnet negatiivselt, vaid aitab hinnata]
