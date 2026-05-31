@@ -73,6 +73,17 @@ Projekti arhitektuur kujuneb [siin](docs/arhitektuur.md)
 | Käitumuslik nihe                      | Andmetes võib tekkida näiline negatiivne korrelatsioon valu ja halva ilma vahel -- sümptomid tegelikult ägenesid, aga registreeritud juhtumeid oli vähem.                                                                                             | Analüüsis kasutatakse onsetDateTime andmevälja (tegelik sümptomite algus), mitte arstivisiidi kuupäeva. See vähendab käitumusliku nihke mõju.                                                                                                                                                                                                       |
 | Terminoloogia kaardistuse ebapiisavus | Kui patsiendil on haruldasem liigesehaigus või valudiagnoos, mille SNOMED kood ei ole referentstabelis esindatud, siis jääb see statistikast välja.  Erinevates piirkondades võivad arstid eelistada erinevaid SNOMED koode (regionaalne varieeruvus) | Tiimil on olemas kompetents, et kaardistada ära kõik olulisemad terminoloogia koodid, mis põhinevad SNOMED International ametlikul kaardistusel. Täiendavalt on võimalik luua andmekvaliteedi kontroll, mis logiks kõik Condition ressursi progresseeruva (recurrence) staatusega haigused eraldi tabelisse, kuid see ei kuulu praeguse töö skoopi. |
 
+### Andmevoog lühidalt
+1. Sissevõtt — projektis on kolm andmeallikat, igaühel oma sissevõtumeetod:
+   1. **Sünteetilised terviseandmed (Synthea FHIR JSON)** Synthea genereerib ühe JSON-faili patsiendi kohta FHIR formaadis. Skript fetch_synthea.py loeb need failid kettalt, parsib ressursitüübid (Patient, Encounter, Organization, Condition) ja laadib need PostgreSQL raw-skeemi. Töödeldakse 100 faili kaupa (batch). Ainult eelnevalt määratud SNOMED koodidega seisundid ja visiidid imporditakse.
+   2. **Ilmastikuandmed (Meteostat API)** Skript fetch_weather.py pärib iga haiguse tekkimise asukoha GPS-koordinaadid raw.organizations tabelist ning laadib vastava ajaperioodi ilmastikuandmed Meteostat teegi kaudu. Kasutatakse päevataseme (daily) mõõtmisi. Kui lähimas jaamas andmed puuduvad, suurendatakse otsinguraadiust (35 → 75 → 150 km).
+   3. **ICD-10 / SNOMED koodide kaardistus (CSV)** Staatiline icd_snomed.csv fail laetakse fetch_icd_codes.py skriptiga tabelisse raw.icd10_codes. See on viitetabel, mis ei muutu.
+   4. **Kõik kolm sissevõtuskripti on idempotentsed** — uuesti käivitamine ei tekita duplikaate (ON CONFLICT DO NOTHING). Andmete sissevõttu orkestreerib Airflow DAG (etl_pipeline). Synthea FHIR JSON-failid ja ICD-10 koodid laetakse paralleelselt, seejärel päritakse Meteostat API kaudu ilmaandmed kõigi asukohafailide koordinaatidele. DAG käivitub käsitsi (manuaalne trigger).
+2. Laadimine — Andmed laaditakse staging kihti
+3. Transformatsioon — [Kirjelda peamised arvutused ja mudelid]
+4. Testimine — [Mitu] andmekvaliteedi testi kontrollivad korrektsust
+5. Näidikulaud — [Kirjelda lühidalt, mida näidikulaud näitab]
+
 ### Andmekvaliteedi testid
 Projekt kontrollib järgmist:
 
