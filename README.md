@@ -142,6 +142,30 @@ docker compose down                         # peata kõik
 docker compose down -v                      # peata + kustuta andmed
 docker compose down --remove-orphans        # peata + eemalda orb-konteinerid
 ```
+### Saladused ja konfiguratsioon
+
+Kõik saladused (paroolid, API võtmed, andmebaasi URL-id) on `.env` failis. Repos on ainult `.env.example`, mis näitab vajalike muutujate struktuuri ilma tegelike väärtusteta. Päris `.env` faili ei tohi GitHubi panna — see on `.gitignore`-s.
+
+Vajalikud muutujad:
+
+| Muutuja                     | Tähendus                            | Näide             |
+| --------------------------- | ----------------------------------- | ----------------- |
+| `POSTGRES_USER`             | PostgreSQL kasutajanimi             | `postgres`        |
+| `POSTGRES_PASSWORD`         | PostgreSQL parool                   | (saladus)         |
+| `POSTGRES_DB`               | Põhiandmebaasi nimi                 | `etl_db`          |
+| `POSTGRES_PORT`             | PostgreSQL port                     | `5432`            |
+| `AIRFLOW_FERNET_KEY`        | Airflow andmete krüpteerimise võti  | (genereerida)     |
+| `AIRFLOW_SECRET_KEY`        | Airflow veebiserveri saladus        | (saladus)         |
+| `AIRFLOW_WWW_USER_USERNAME` | Airflow UI kasutajanimi             | `admin`           |
+| `AIRFLOW_WWW_USER_PASSWORD` | Airflow UI parool                   | (saladus)         |
+| `SUPERSET_SECRET_KEY`       | Superset saladus                    | (saladus)         |
+| `SUPERSET_ADMIN_USERNAME`   | Superset UI kasutajanimi            | `admin`           |
+| `SUPERSET_ADMIN_PASSWORD`   | Superset UI parool                  | (saladus)         |
+| `SYNTHEA_POPULATION`        | Genereeritavate patsientide arv     | `100`             |
+| `SYNTHEA_STATE_1`           | Esimene osariik                     | `Massachusetts`   |
+| `SYNTHEA_STATE_2`           | Teine osariik                       | `California`      |
+| `FHIR_LIMIT`                | Maksimaalne parsitavate failide arv | `0` (piiranguta)  |
+| `AIRFLOW_ALERT_EMAIL`       | E-post tõrketeadeteks (valikuline)  | (tühi = keelatud) |
 
 ### Riskid
 
@@ -210,7 +234,7 @@ Testide tulemused: []
 
 
 
-### Saladused ja konfiguratsioon
+
 
 ### Projekti struktuur
 ```
