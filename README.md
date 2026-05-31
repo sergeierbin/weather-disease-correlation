@@ -61,9 +61,9 @@ Projekti andmed oleme üles ehitanud täheskeemi põhimõttel, kus konteksti ole
 Projekti arhitektuur kujuneb [siin](docs/arhitektuur.md)  
 
 ### Andmeallikad
-1. Ilmastikuandmete API
+1. Ilmastikuandmete API — [Meteostat](https://meteostat.net)
 2. SNOMED CT - ICD-10 mapping CSV failina
-3. Sünteetilised terviseandmed HL7 FHIR andmevahetusstandardis [Synthea](https://github.com/synthetichealth/synthea)
+3. Sünteetilised terviseandmed [HL7 FHIR R4](https://hl7.org/fhir/R4/) andmevahetusstandardis — [Synthea](https://github.com/synthetichealth/synthea)
 
 ### Andmestik
 
@@ -77,12 +77,12 @@ Projekti arhitektuur kujuneb [siin](docs/arhitektuur.md)
 
 | Komponent           | Tööriist                             |
 | ------------------- | ------------------------------------ |
-| Sissevõtt           | Python (Meteostat, FHIR JSON parser) |
-| Orkestreerimine     | Airflow                              |
-| Transformatsioon    | dbt                                  |
-| Andmehoidla         | PostgreSQL                           |
-| Konteineriseerimine | Docker                               |
-| Näidikulaud         | Superset                             |
+| Sissevõtt           | Python ([Meteostat](https://meteostat.net), FHIR JSON parser) |
+| Orkestreerimine     | [Apache Airflow](https://airflow.apache.org) |
+| Transformatsioon    | [dbt](https://docs.getdbt.com)       |
+| Andmehoidla         | [PostgreSQL](https://www.postgresql.org) |
+| Konteineriseerimine | [Docker](https://www.docker.com)     |
+| Näidikulaud         | [Apache Superset](https://superset.apache.org) |
 
 ### Käivitamine
 
@@ -176,10 +176,10 @@ Vajalikud muutujad:
 
 ### Andmevoog lühidalt
 1. Sissevõtt — projektis on kolm andmeallikat, igaühel oma sissevõtumeetod:
-   1. **Sünteetilised terviseandmed (Synthea FHIR JSON)** Synthea genereerib ühe JSON-faili patsiendi kohta FHIR formaadis. Skript fetch_synthea.py loeb need failid kettalt, parsib ressursitüübid (Patient, Encounter, Organization, Condition) ja laadib need PostgreSQL raw-skeemi. Töödeldakse 100 faili kaupa (batch). Ainult eelnevalt määratud SNOMED koodidega seisundid ja visiidid imporditakse.
-   2. **Ilmastikuandmed (Meteostat API)** Skript fetch_weather.py pärib iga haiguse tekkimise asukoha GPS-koordinaadid raw.organizations tabelist ning laadib vastava ajaperioodi ilmastikuandmed Meteostat teegi kaudu. Kasutatakse päevataseme (daily) mõõtmisi. Kui lähimas jaamas andmed puuduvad, suurendatakse otsinguraadiust (35 → 75 → 150 km).
-   3. **ICD-10 / SNOMED koodide kaardistus (CSV)** Staatiline icd_snomed.csv fail laetakse fetch_icd_codes.py skriptiga tabelisse raw.icd10_codes. See on viitetabel, mis ei muutu.
-   4. **Kõik kolm sissevõtuskripti on idempotentsed** — uuesti käivitamine ei tekita duplikaate (ON CONFLICT DO NOTHING). Andmete sissevõttu orkestreerib Airflow DAG (etl_pipeline). Synthea FHIR JSON-failid ja ICD-10 koodid laetakse paralleelselt, seejärel päritakse Meteostat API kaudu ilmaandmed kõigi asukohafailide koordinaatidele. DAG käivitub käsitsi (manuaalne trigger).
+   1. **Sünteetilised terviseandmed (Synthea FHIR JSON)** Synthea genereerib ühe JSON-faili patsiendi kohta [FHIR R4](https://hl7.org/fhir/R4/) formaadis. Skript [fetch_synthea.py](ingestion/fetch_synthea.py) loeb need failid kettalt, parsib ressursitüübid (Patient, Encounter, Organization, Condition) ja laadib need PostgreSQL raw-skeemi. Töödeldakse 100 faili kaupa (batch). Ainult eelnevalt määratud SNOMED koodidega seisundid ja visiidid imporditakse.
+   2. **Ilmastikuandmed (Meteostat API)** Skript [fetch_weather.py](ingestion/fetch_weather.py) pärib iga haiguse tekkimise asukoha GPS-koordinaadid raw.organizations tabelist ning laadib vastava ajaperioodi ilmastikuandmed [Meteostat](https://meteostat.net) teegi kaudu. Kasutatakse päevataseme (daily) mõõtmisi. Kui lähimas jaamas andmed puuduvad, suurendatakse otsinguraadiust (35 → 75 → 150 km).
+   3. **ICD-10 / SNOMED koodide kaardistus (CSV)** Staatiline [icd_snomed.csv](ingestion/icd_snomed.csv) fail laetakse [fetch_icd_codes.py](ingestion/fetch_icd_codes.py) skriptiga tabelisse raw.icd10_codes. See on viitetabel, mis ei muutu.
+   4. **Kõik kolm sissevõtuskripti on idempotentsed** — uuesti käivitamine ei tekita duplikaate (ON CONFLICT DO NOTHING). Andmete sissevõttu orkestreerib Airflow DAG ([etl_pipeline.py](airflow/dags/etl_pipeline.py)). Synthea FHIR JSON-failid ja ICD-10 koodid laetakse paralleelselt, seejärel päritakse Meteostat API kaudu ilmaandmed kõigi asukohafailide koordinaatidele. DAG käivitub käsitsi (manuaalne trigger).
 2. Laadimine — Andmed laaditakse staging kihti
    Airflow DAG laadib kõigepealt andmed `raw`-skeemi (kolm paralleelset sissevõtuskripti). Seejärel käivitab dbt staging kihi mudelid, mis loevad `raw`-tabelist ja loovad puhastatud vaated `staging`-skeemis.
 
@@ -286,6 +286,11 @@ weather-disease-correlation/
 │           ├── fct_patient_day.sql
 │           ├── fct_patient_weather_region.sql
 │           └── fct_weather_region_day.sql
+│
+├── dbt/tests/                  # Kohandatud SQL andmekvaliteedi testid
+│   ├── stg_conditions_abatement_after_onset.sql
+│   ├── stg_weather_prcp_not_negative.sql
+│   └── stg_weather_tavg_valid_range.sql
 │
 ├── tests/                      # pytest unit testid
 │   ├── test_fetch_synthea.py
