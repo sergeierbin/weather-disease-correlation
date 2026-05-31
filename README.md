@@ -61,9 +61,10 @@ Projekti arhitektuur kujuneb [siin](docs/arhitektuur.md)
 
 | Allikas                                     | Tüüp   | Ajas muutuv?                   | Roll          |
 | ------------------------------------------- | ------ | ------------------------------ | ------------- |
-| Ilmastikuandmed   | API  | Jah, päevas | Põhiandmevoog |
-| SNOMED CT - ICD-10 maping | seed | Ei, staatiline | Kõrvaltabel   |
-| Sünteetilised terviseandmed | seed |JAH, iga päev ?  | Kõrvaltabel   |
+| Sünteetilised terviseandmed | FHIR JSON | Jah (kui genereerida uusi Synthea faile) | Põhiandmevoog   |
+| Ilmastikuandmed   | Meteostat API  | Jah, igapäevaselt | Põhiandmevoog |
+| SNOMED CT - ICD-10 mapping | CSV | Ei, staatiline | Kõrvaltabel   |
+
 
 ### Riskid
 
