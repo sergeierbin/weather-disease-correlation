@@ -92,7 +92,7 @@ Projekti arhitektuur kujuneb [siin](docs/arhitektuur.md)
    | `stg_icd_codes` | `raw.icd10_codes` | ICD-10 / SNOMED kaardistus |
 
    Staging mudelid on dbt **vaated** (mitte tabelid) — andmeid ei kopeerita, SQL käivitatakse päringu ajal. Kõigil mudelitel on andmekvaliteedi testid (unikaalsus, not null, FK suhted).
-3. Transformatsioon — dbt transformeerib `staging`-kihi andmed tähtskeemi (star schema) `marts`-kihis.
+3. Transformatsioon — dbt transformeerib `staging`-kihi andmed tähtskeemi (star schema) `marts`-kihiks.
 
    **Dimensioonitabelid (5 tk):**
 
@@ -106,7 +106,7 @@ Projekti arhitektuur kujuneb [siin](docs/arhitektuur.md)
 
    **Faktitabelid (3 tk, kõik inkrementaalsed):**
 
-   | Mudel | Granulariteet | Peamised arvutused |
+   | Mudel | Granularsus | Peamised arvutused |
    |---|---|---|
    | `fct_patient_day` | patsient × päev × piirkond | haigussündmuste arv päevas; vihmasajupäeva lipp |
    | `fct_patient_weather_region` | üksik haigusseisund | iga diagnoos koos ilma- ja asukohakontekstiga |
