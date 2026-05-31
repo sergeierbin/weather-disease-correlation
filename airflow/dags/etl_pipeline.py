@@ -66,7 +66,7 @@ with DAG(
     ingest_synthea = BashOperator(
         task_id="ingest_synthea",
         bash_command="python /opt/airflow/ingestion/fetch_synthea.py",
-        execution_timeout=timedelta(hours=1),
+        execution_timeout=timedelta(hours=3),
     )
 
     # ── Step 2: ingest ICD-10 / SNOMED mapping ───────────────────────────────
@@ -92,8 +92,8 @@ with DAG(
     # Executes the full dbt lineage:
     #   raw → staging (views) → intermediate (views) → marts (tables)
     # Must run after all ingestion tasks so the raw schema is fully populated.
-    _dbt = (
-        "/home/airflow/.local/bin/dbt"
+    _dbt = "/home/airflow/.local/bin/dbt"
+    _opts = (
         " --project-dir /opt/airflow/dbt"
         " --profiles-dir /opt/airflow/dbt"
         " --log-path /tmp/dbt_logs"
@@ -101,7 +101,12 @@ with DAG(
     )
     dbt_run = BashOperator(
         task_id="dbt_run",
-        bash_command=f"{_dbt} run && {_dbt} test && {_dbt} source freshness",
+        bash_command=(
+            f"{_dbt} run{_opts} && "
+            f"{_dbt} test{_opts} && "
+            f"{_dbt} source freshness{_opts} && "
+            f"{_dbt} docs generate{_opts}"
+        ),
         execution_timeout=timedelta(minutes=30),
     )
 

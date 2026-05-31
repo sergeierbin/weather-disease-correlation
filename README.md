@@ -142,6 +142,10 @@ Ava **Airflow**: http://localhost:8080 (admin / admin)
 Ava **Superset**: http://localhost:8088 (admin / admin)
 - Dashboard on automaatselt imporditud
 
+Ava **dbt docs**: http://localhost:8081
+- Andmemudeli lineage graaf ja dokumentatsioon
+- Uueneb automaatselt iga DAG käivitusega
+
 ---
 
 #### Kasulikud käsud
