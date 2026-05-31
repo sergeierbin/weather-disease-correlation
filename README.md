@@ -44,10 +44,7 @@ Projekti eesmärk on uurida, kuidas jaotuvad valuga seotud diagnoosid piirkonnit
      - kuiv ilm
      - sekundaarne dimensioon: temperatuur (näiteks külm/soe)
 
-### Andmeallikad
-1. Ilmastikuandmete API
-2. SNOMED CT - ICD-10 maping excel tabelina
-3. Sünteetilised terviseandmed HL7 FHIR andmevahetusstandardis [Synthea](https://github.com/synthetichealth/synthea)
+
 
 ### Arhitektuur
 Arhitektuuri dokumentatsioon on koostatud mermaid diagrammi kasutades. 
@@ -56,6 +53,10 @@ Projekti andmed oleme üles ehitanud täheskeemi põhimõttel, kus konteksti ole
 
 Projekti arhitektuur kujuneb [siin](docs/arhitektuur.md)  
 
+### Andmeallikad
+1. Ilmastikuandmete API
+2. SNOMED CT - ICD-10 maping excel tabelina
+3. Sünteetilised terviseandmed HL7 FHIR andmevahetusstandardis [Synthea](https://github.com/synthetichealth/synthea)
 
 ### Andmestik
 
@@ -75,70 +76,6 @@ Projekti arhitektuur kujuneb [siin](docs/arhitektuur.md)
 | Andmehoidla         | PostgreSQL                           |
 | Konteineriseerimine | Docker                               |
 | Näidikulaud         | Superset                             |
-
-### Riskid
-
-| Risk                                  | Mõju                                                                                                                                                                                                                                                  | Maandus                                                                                                                                                                                                                                                                                                                                             |
-| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Sünteetiliste andmete kasutamise risk | Synthea on tõenäosuspõhine andmegeneraator. See tähendab, et reaalses elus eksisteerivat seost ei pruugi sünteetilised andmed peegeldada. Lõplik analüüs gold-kihis võib ekslikku või statistiliselt mitteolulist tulemust näidata.                   | Projekti eesmärk on andmetorustiku ja analüütika raamistiku töökindluse testimine, mitte meditsiinilise tõe välja selgitamine. Proovime disainida skaleeruva süsteemi, mida oleks võimalik ka reaalandmetega katsetada.                                                                                                                             |
-| Käitumuslik nihe                      | Andmetes võib tekkida näiline negatiivne korrelatsioon valu ja halva ilma vahel -- sümptomid tegelikult ägenesid, aga registreeritud juhtumeid oli vähem.                                                                                             | Analüüsis kasutatakse onsetDateTime andmevälja (tegelik sümptomite algus), mitte arstivisiidi kuupäeva. See vähendab käitumusliku nihke mõju.                                                                                                                                                                                                       |
-| Terminoloogia kaardistuse ebapiisavus | Kui patsiendil on haruldasem liigesehaigus või valudiagnoos, mille SNOMED kood ei ole referentstabelis esindatud, siis jääb see statistikast välja.  Erinevates piirkondades võivad arstid eelistada erinevaid SNOMED koode (regionaalne varieeruvus) | Tiimil on olemas kompetents, et kaardistada ära kõik olulisemad terminoloogia koodid, mis põhinevad SNOMED International ametlikul kaardistusel. Täiendavalt on võimalik luua andmekvaliteedi kontroll, mis logiks kõik Condition ressursi progresseeruva (recurrence) staatusega haigused eraldi tabelisse, kuid see ei kuulu praeguse töö skoopi. |
-
-### Andmevoog lühidalt
-1. Sissevõtt — projektis on kolm andmeallikat, igaühel oma sissevõtumeetod:
-   1. **Sünteetilised terviseandmed (Synthea FHIR JSON)** Synthea genereerib ühe JSON-faili patsiendi kohta FHIR formaadis. Skript fetch_synthea.py loeb need failid kettalt, parsib ressursitüübid (Patient, Encounter, Organization, Condition) ja laadib need PostgreSQL raw-skeemi. Töödeldakse 100 faili kaupa (batch). Ainult eelnevalt määratud SNOMED koodidega seisundid ja visiidid imporditakse.
-   2. **Ilmastikuandmed (Meteostat API)** Skript fetch_weather.py pärib iga haiguse tekkimise asukoha GPS-koordinaadid raw.organizations tabelist ning laadib vastava ajaperioodi ilmastikuandmed Meteostat teegi kaudu. Kasutatakse päevataseme (daily) mõõtmisi. Kui lähimas jaamas andmed puuduvad, suurendatakse otsinguraadiust (35 → 75 → 150 km).
-   3. **ICD-10 / SNOMED koodide kaardistus (CSV)** Staatiline icd_snomed.csv fail laetakse fetch_icd_codes.py skriptiga tabelisse raw.icd10_codes. See on viitetabel, mis ei muutu.
-   4. **Kõik kolm sissevõtuskripti on idempotentsed** — uuesti käivitamine ei tekita duplikaate (ON CONFLICT DO NOTHING). Andmete sissevõttu orkestreerib Airflow DAG (etl_pipeline). Synthea FHIR JSON-failid ja ICD-10 koodid laetakse paralleelselt, seejärel päritakse Meteostat API kaudu ilmaandmed kõigi asukohafailide koordinaatidele. DAG käivitub käsitsi (manuaalne trigger).
-2. Laadimine — Andmed laaditakse staging kihti
-   Airflow DAG laadib kõigepealt andmed `raw`-skeemi (kolm paralleelset sissevõtuskripti). Seejärel käivitab dbt staging kihi mudelid, mis loevad `raw`-tabelist ja loovad puhastatud vaated `staging`-skeemis.
-
-   | Staging mudel | Raw allikas | Peamised muutused |
-   |---|---|---|
-   | `stg_patients` | `raw.patients` | `id` → `patient_id` |
-   | `stg_encounters` | `raw.encounters` | veergude ümbernimetamine |
-   | `stg_conditions` | `raw.conditions` | kõik diagnostikaväljad säilitatakse |
-   | `stg_organizations` | `raw.organizations` | `id` → `organization_id` |
-   | `stg_weather` | `raw.weather` | `NaN` → `NULL`; lisatakse `pres_prev` ja `pres_drop` (rõhu langus ≥5 ühikut) |
-   | `stg_icd_codes` | `raw.icd10_codes` | ICD-10 / SNOMED kaardistus |
-
-   Staging mudelid on dbt **vaated** (mitte tabelid) — andmeid ei kopeerita, SQL käivitatakse päringu ajal. Kõigil mudelitel on andmekvaliteedi testid (unikaalsus, not null, FK suhted).
-3. Transformatsioon — dbt transformeerib `staging`-kihi andmed tähtskeemi (star schema) `marts`-kihiks.
-
-   **Dimensioonitabelid (5 tk):**
-
-   | Mudel | Allikas | Sisu |
-   |---|---|---|
-   | `dim_date` | `stg_conditions` | Kuupäevaspain haiguste alguskuupäevast tänaseni; `date_key` = YYYYMMDD |
-   | `dim_patients` | `stg_patients` | Patsiendid; `patient_key` = MD5(patient_id) |
-   | `dim_region` | `stg_organizations` | Asukohad koordinaatidega; `region_key` = MD5(organization_id) |
-   | `dim_diagnosis` | `stg_icd_codes` | ICD-10 / SNOMED kaardistus; `diagnosis_key` = MD5(icd10_code \|\| snomed_code) |
-   | `dim_weather_type` | `stg_weather` | Ilmatüüp: sademete ja rõhulanguse kombinatsioon + temperatuurivahemik (`külm`/`soe`) |
-
-   **Faktitabelid (3 tk, kõik inkrementaalsed):**
-
-   | Mudel | Granularsus | Peamised arvutused |
-   |---|---|---|
-   | `fct_patient_day` | patsient × päev × piirkond | haigussündmuste arv päevas; vihmasajupäeva lipp |
-   | `fct_patient_weather_region` | üksik haigusseisund | iga diagnoos koos ilma- ja asukohakontekstiga |
-   | `fct_weather_region_day` | piirkond × päev | ilmakokkuvõte piirkonniti: sademed, temperatuur, rõhk, rõhulanguse lipp |
-
-   **Olulisemad arvutused:**
-   - Surrogaatvõtmed: kõik dimensioonid ja faktid kasutavad MD5-räsi loomulikest võtmetest
-   - Ilmastiku geograafiline sidumine: ilmaandmed seotakse patsientidega läbi `raw.organizations` koordinaatide (lat/lon)
-   - Rõhulanguse lipp: arvutatakse staging-kihis — kui rõhk langes eelmisest päevast ≥5 hPa, on `pres_drop = TRUE`
-4. Testimine — [Mitu] andmekvaliteedi testi kontrollivad korrektsust
-5. Näidikulaud — [Kirjelda lühidalt, mida näidikulaud näitab]
-
-### Andmekvaliteedi testid
-Projekt kontrollib järgmist:
-
-[Test 1 - ]
-[Test 2 - ]
-[Test 3 - ]
-Testide tulemused: []
-
-
 
 ### Käivitamine
 
@@ -205,6 +142,72 @@ docker compose down                         # peata kõik
 docker compose down -v                      # peata + kustuta andmed
 docker compose down --remove-orphans        # peata + eemalda orb-konteinerid
 ```
+
+### Riskid
+
+| Risk                                  | Mõju                                                                                                                                                                                                                                                  | Maandus                                                                                                                                                                                                                                                                                                                                             |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sünteetiliste andmete kasutamise risk | Synthea on tõenäosuspõhine andmegeneraator. See tähendab, et reaalses elus eksisteerivat seost ei pruugi sünteetilised andmed peegeldada. Lõplik analüüs gold-kihis võib ekslikku või statistiliselt mitteolulist tulemust näidata.                   | Projekti eesmärk on andmetorustiku ja analüütika raamistiku töökindluse testimine, mitte meditsiinilise tõe välja selgitamine. Proovime disainida skaleeruva süsteemi, mida oleks võimalik ka reaalandmetega katsetada.                                                                                                                             |
+| Käitumuslik nihe                      | Andmetes võib tekkida näiline negatiivne korrelatsioon valu ja halva ilma vahel -- sümptomid tegelikult ägenesid, aga registreeritud juhtumeid oli vähem.                                                                                             | Analüüsis kasutatakse onsetDateTime andmevälja (tegelik sümptomite algus), mitte arstivisiidi kuupäeva. See vähendab käitumusliku nihke mõju.                                                                                                                                                                                                       |
+| Terminoloogia kaardistuse ebapiisavus | Kui patsiendil on haruldasem liigesehaigus või valudiagnoos, mille SNOMED kood ei ole referentstabelis esindatud, siis jääb see statistikast välja.  Erinevates piirkondades võivad arstid eelistada erinevaid SNOMED koode (regionaalne varieeruvus) | Tiimil on olemas kompetents, et kaardistada ära kõik olulisemad terminoloogia koodid, mis põhinevad SNOMED International ametlikul kaardistusel. Täiendavalt on võimalik luua andmekvaliteedi kontroll, mis logiks kõik Condition ressursi progresseeruva (recurrence) staatusega haigused eraldi tabelisse, kuid see ei kuulu praeguse töö skoopi. |
+
+### Andmevoog lühidalt
+1. Sissevõtt — projektis on kolm andmeallikat, igaühel oma sissevõtumeetod:
+   1. **Sünteetilised terviseandmed (Synthea FHIR JSON)** Synthea genereerib ühe JSON-faili patsiendi kohta FHIR formaadis. Skript fetch_synthea.py loeb need failid kettalt, parsib ressursitüübid (Patient, Encounter, Organization, Condition) ja laadib need PostgreSQL raw-skeemi. Töödeldakse 100 faili kaupa (batch). Ainult eelnevalt määratud SNOMED koodidega seisundid ja visiidid imporditakse.
+   2. **Ilmastikuandmed (Meteostat API)** Skript fetch_weather.py pärib iga haiguse tekkimise asukoha GPS-koordinaadid raw.organizations tabelist ning laadib vastava ajaperioodi ilmastikuandmed Meteostat teegi kaudu. Kasutatakse päevataseme (daily) mõõtmisi. Kui lähimas jaamas andmed puuduvad, suurendatakse otsinguraadiust (35 → 75 → 150 km).
+   3. **ICD-10 / SNOMED koodide kaardistus (CSV)** Staatiline icd_snomed.csv fail laetakse fetch_icd_codes.py skriptiga tabelisse raw.icd10_codes. See on viitetabel, mis ei muutu.
+   4. **Kõik kolm sissevõtuskripti on idempotentsed** — uuesti käivitamine ei tekita duplikaate (ON CONFLICT DO NOTHING). Andmete sissevõttu orkestreerib Airflow DAG (etl_pipeline). Synthea FHIR JSON-failid ja ICD-10 koodid laetakse paralleelselt, seejärel päritakse Meteostat API kaudu ilmaandmed kõigi asukohafailide koordinaatidele. DAG käivitub käsitsi (manuaalne trigger).
+2. Laadimine — Andmed laaditakse staging kihti
+   Airflow DAG laadib kõigepealt andmed `raw`-skeemi (kolm paralleelset sissevõtuskripti). Seejärel käivitab dbt staging kihi mudelid, mis loevad `raw`-tabelist ja loovad puhastatud vaated `staging`-skeemis.
+
+   | Staging mudel | Raw allikas | Peamised muutused |
+   |---|---|---|
+   | `stg_patients` | `raw.patients` | `id` → `patient_id` |
+   | `stg_encounters` | `raw.encounters` | veergude ümbernimetamine |
+   | `stg_conditions` | `raw.conditions` | kõik diagnostikaväljad säilitatakse |
+   | `stg_organizations` | `raw.organizations` | `id` → `organization_id` |
+   | `stg_weather` | `raw.weather` | `NaN` → `NULL`; lisatakse `pres_prev` ja `pres_drop` (rõhu langus ≥5 ühikut) |
+   | `stg_icd_codes` | `raw.icd10_codes` | ICD-10 / SNOMED kaardistus |
+
+   Staging mudelid on dbt **vaated** (mitte tabelid) — andmeid ei kopeerita, SQL käivitatakse päringu ajal. Kõigil mudelitel on andmekvaliteedi testid (unikaalsus, not null, FK suhted).
+3. Transformatsioon — dbt transformeerib `staging`-kihi andmed tähtskeemi (star schema) `marts`-kihiks.
+
+   **Dimensioonitabelid (5 tk):**
+
+   | Mudel | Allikas | Sisu |
+   |---|---|---|
+   | `dim_date` | `stg_conditions` | Kuupäevaspain haiguste alguskuupäevast tänaseni; `date_key` = YYYYMMDD |
+   | `dim_patients` | `stg_patients` | Patsiendid; `patient_key` = MD5(patient_id) |
+   | `dim_region` | `stg_organizations` | Asukohad koordinaatidega; `region_key` = MD5(organization_id) |
+   | `dim_diagnosis` | `stg_icd_codes` | ICD-10 / SNOMED kaardistus; `diagnosis_key` = MD5(icd10_code \|\| snomed_code) |
+   | `dim_weather_type` | `stg_weather` | Ilmatüüp: sademete ja rõhulanguse kombinatsioon + temperatuurivahemik (`külm`/`soe`) |
+
+   **Faktitabelid (3 tk, kõik inkrementaalsed):**
+
+   | Mudel | Granularsus | Peamised arvutused |
+   |---|---|---|
+   | `fct_patient_day` | patsient × päev × piirkond | haigussündmuste arv päevas; vihmasajupäeva lipp |
+   | `fct_patient_weather_region` | üksik haigusseisund | iga diagnoos koos ilma- ja asukohakontekstiga |
+   | `fct_weather_region_day` | piirkond × päev | ilmakokkuvõte piirkonniti: sademed, temperatuur, rõhk, rõhulanguse lipp |
+
+   **Olulisemad arvutused:**
+   - Surrogaatvõtmed: kõik dimensioonid ja faktid kasutavad MD5-räsi loomulikest võtmetest
+   - Ilmastiku geograafiline sidumine: ilmaandmed seotakse patsientidega läbi `raw.organizations` koordinaatide (lat/lon)
+   - Rõhulanguse lipp: arvutatakse staging-kihis — kui rõhk langes eelmisest päevast ≥5 hPa, on `pres_drop = TRUE`
+4. Testimine — [Mitu] andmekvaliteedi testi kontrollivad korrektsust
+5. Näidikulaud — [Kirjelda lühidalt, mida näidikulaud näitab]
+
+### Andmekvaliteedi testid
+Projekt kontrollib järgmist:
+
+[Test 1 - ]
+[Test 2 - ]
+[Test 3 - ]
+Testide tulemused: []
+
+
+
+
 
 
 ### Saladused ja konfiguratsioon
