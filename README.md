@@ -4,14 +4,15 @@
 
 ### Sisukord
 - [Äriküsimus](#äriküsimus)
-- [Andmeallikad](#andmeallikad)
-- [Arhitektuur](#arhitektuur)
-- [Andmestik](#andmestik)
 - [Riskid](#riskid)
-- [Andmekvaliteedi testid](#andmekvaliteedi-testid)
+- [Arhitektuur](#arhitektuur)
+- [Andmeallikad](#andmeallikad)
+- [Andmestik](#andmestik)
 - [Stack](#stack)
 - [Käivitamine](#käivitamine)
 - [Saladused ja konfiguratsioon](#saladused-ja-konfiguratsioon)
+- [Andmevoog lühidalt](#andmevoog-lühidalt)
+- [Andmekvaliteedi testid](#andmekvaliteedi-testid)
 - [Projekti struktuur](#projekti-struktuur)
 - [Kokkuvõte, puudused ja võimalikud edasiarendused](#kokkuvõte-puudused-ja-võimalikud-edasiarendused)
 - [Meeskond](#meeskond)
@@ -43,7 +44,7 @@ Projekti eesmärk on uurida, kuidas jaotuvad valuga seotud diagnoosid piirkonnit
      - vihm ilma rõhulanguseta
      - kuiv ilm
      - sekundaarne dimensioon: temperatuur (näiteks külm/soe)
-#### Riskid
+### Riskid
 
 | Risk                                  | Mõju                                                                                                                                                                                                                                                  | Maandus                                                                                                                                                                                                                                                                                                                                             |
 | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -61,7 +62,7 @@ Projekti arhitektuur kujuneb [siin](docs/arhitektuur.md)
 
 ### Andmeallikad
 1. Ilmastikuandmete API
-2. SNOMED CT - ICD-10 maping excel tabelina
+2. SNOMED CT - ICD-10 mapping CSV failina
 3. Sünteetilised terviseandmed HL7 FHIR andmevahetusstandardis [Synthea](https://github.com/synthetichealth/synthea)
 
 ### Andmestik
@@ -76,7 +77,7 @@ Projekti arhitektuur kujuneb [siin](docs/arhitektuur.md)
 
 | Komponent           | Tööriist                             |
 | ------------------- | ------------------------------------ |
-| Sissevõtt           | Python |
+| Sissevõtt           | Python (Meteostat, FHIR JSON parser) |
 | Orkestreerimine     | Airflow                              |
 | Transformatsioon    | dbt                                  |
 | Andmehoidla         | PostgreSQL                           |
@@ -226,19 +227,6 @@ Projekt kontrollib järgmist:
 [Test 2 - ]
 [Test 3 - ]
 Testide tulemused: []
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ### Projekti struktuur
 ```
