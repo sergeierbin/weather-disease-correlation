@@ -311,7 +311,7 @@ weather-disease-correlation/
 
 | Nimi              | Roll               |
 | ----------------- | ------------------ |
-| Sergei Erbin      | Tehniline stack    |
+| Sergei Erbin      | E2E Andmetoru arendamine (Claude Code abiga) |
 | Maria Kuusik      | Andmekvaliteet     |
 | Kalder Maarand    | Transformatsioonid |
 | Scharlett Hansson | Arhitektuur        |
