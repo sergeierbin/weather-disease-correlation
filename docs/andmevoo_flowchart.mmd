@@ -39,6 +39,7 @@ flowchart LR
     D4[raw_snomedct-icd10_maping]
     D5[raw_weather]
     D6[raw_regions]
+    D7[raw_organizations]
 
     D --> D1
     D --> D2
@@ -46,6 +47,7 @@ flowchart LR
     D --> D4
     D --> D5
     D --> D6
+    D --> D7
 
     %% =========================
     %% PUHASTUSKIHT / HÕBE KIHT
@@ -61,6 +63,7 @@ flowchart LR
     E6[fact_patient_weather_region]
     %% faktitabel moodustub lausendist ühe patsiendi sündmus ühes päevas
     E7[fact_patient_day]
+    E8[dim_weather_type]
 
     D --> E
      
@@ -70,7 +73,9 @@ flowchart LR
     E --> E4 
     E --> E5
     E --> E6
-    E --> E7   
+    E --> E7
+    E --> E8
+       
     E--> F
 
     %% =========================
@@ -101,8 +106,8 @@ flowchart LR
     %% ANALÜÜTIKA / VISUAALID
     %% =========================
     H[ANALÜÜTIKA]
-    H1[Valuga seotud haiguste esinemissagedus 1000 patsiendi kohta Massachusettsi ja California piirkondades]
-    H2[Valuga seotud haigustega patsientide osakaal ilmastikutüübi järgi //%]
+    H1[Valuga seotud haigussündmuste arv Massachusettsi ja California piirkondades]
+    H2[Valuga seotud haigustega patsientide arv ilmastikutüübi järgi]
     H3[Korduvate valuga seotud diagnooside osakaal kombinatsioonis ilmastikutüübi ja rõhulangusega piirkonna lõikes]
 
     H --> H1

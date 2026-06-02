@@ -15,7 +15,7 @@ graph LR
     subgraph Andmeallikad
         A[Synthea andmestik] 
         B[SNOMED CT - ICD-10 maping]
-        C[Ilmaandmete API]
+        C[Meteostat API]
     end
 
     subgraph Toorkiht
@@ -39,6 +39,19 @@ graph LR
 
 ## Andmevoo skeem
 Andmevoo skeemis eristatakse andmetoru jaoks kolme kihti: toorkiht, puhastuskiht ning ärikiht
+Andmetorus on kasutusel kolm andmeallikat, nagu näha ka ülaltoodud diagrammil: 
+1. Sünteetilised terviseandmed (Synthea HL7 FHIR JSON) - Synthea genereerib ühe JSON-faili patsiendi kohta FHIR R4 formaadis. Skript fetch_synthea.py loeb need failid kettalt, parsib ressursitüübid (Patient, Encounter, Organization, Condition) ja laadib need PostgreSQL raw-skeemi. Töödeldakse 100 faili kaupa (batch). Ainult eelnevalt määratud SNOMED koodidega seisundid ja visiidid imporditakse.
+2. Ilmastikuandmed (Meteostat API) Skript fetch_weather.py pärib iga haiguse tekkimise asukoha GPS-koordinaadid raw.organizations tabelist ning laadib vastava ajaperioodi ilmastikuandmed Meteostat teegi kaudu. Kasutatakse päevataseme (daily) mõõtmisi. Kui lähimas jaamas andmed puuduvad, suurendatakse otsinguraadiust (35 → 75 → 150 km).
+3. ICD-10 / SNOMED koodide kaardistus (CSV) Staatiline icd_snomed.csv fail laetakse fetch_icd_codes.py skriptiga tabelisse raw.icd10_codes. See on viitetabel, mis ei muutu.
+
+Kõik kolm sissevõtuskripti on **idempotentsed** — uuesti käivitamine ei tekita duplikaate. Andmete sissevõttu orkestreerib Airflow DAG (etl_pipeline.py). Synthea FHIR JSON-failid ja ICD-10 koodid laetakse paralleelselt, seejärel päritakse Meteostat API kaudu ilmaandmed kõigi asukohafailide koordinaatidele. DAG käivitub käsitsi (manuaalne trigger).
+Airflow DAG laadib kõigepealt andmed toorskeemi (raw), selleks on loodud kolm paralleelset sissevõtuskripti. Seejärel käivitab dbt puhastuskihi (staging) mudelid, mis loevad toorandmete tabelitest ja loovad puhastatud vaated puhastuskihis (staging-skeemis) mudelina. Puhastukihi mudelid on dbt vaated (mitte tabelid) — andmeid ei kopeerita, SQL käivitatakse päringu ajal. Kõigil mudelitel on andmekvaliteedi testid (unikaalsus, not null, FK suhted).
+
+Olulisemad arvutused:
+
+- Surrogaatvõtmed: kõik dimensioonid ja faktid kasutavad MD5-räsi loomulikest võtmetest
+- Ilmastiku geograafiline sidumine: ilmaandmed seotakse patsientidega läbi raw.organizations koordinaatide (lat/lon)
+- Rõhulanguse lipp: arvutatakse staging-kihis — kui rõhk langes eelmisest päevast ≥5 hPa, on pres_drop = TRUE
 
 ```mermaid
 %% Andmevoo vooskeem
@@ -82,6 +95,7 @@ flowchart LR
     D4[raw_snomedct-icd10_maping]
     D5[raw_weather]
     D6[raw_regions]
+    D7[raw_organizations]
 
     D --> D1
     D --> D2
@@ -89,6 +103,7 @@ flowchart LR
     D --> D4
     D --> D5
     D --> D6
+    D --> D7
 
     %% =========================
     %% PUHASTUSKIHT / HÕBE KIHT
@@ -104,6 +119,7 @@ flowchart LR
     E6[fact_patient_weather_region]
     %% faktitabel moodustub lausendist ühe patsiendi sündmus ühes päevas
     E7[fact_patient_day]
+    E8[dim_weather_type]
 
     D --> E
      
@@ -113,7 +129,9 @@ flowchart LR
     E --> E4 
     E --> E5
     E --> E6
-    E --> E7   
+    E --> E7
+    E --> E8
+       
     E--> F
 
     %% =========================
@@ -144,8 +162,8 @@ flowchart LR
     %% ANALÜÜTIKA / VISUAALID
     %% =========================
     H[ANALÜÜTIKA]
-    H1[Valuga seotud haiguste esinemissagedus 1000 patsiendi kohta Massachusettsi ja California piirkondades]
-    H2[Valuga seotud haigustega patsientide osakaal ilmastikutüübi järgi //%]
+    H1[Valuga seotud haigussündmuste arv Massachusettsi ja California piirkondades]
+    H2[Valuga seotud haigustega patsientide arv ilmastikutüübi järgi]
     H3[Korduvate valuga seotud diagnooside osakaal kombinatsioonis ilmastikutüübi ja rõhulangusega piirkonna lõikes]
 
     H --> H1
@@ -167,15 +185,15 @@ flowchart LR
 
 ### fact_weather_region_day
 - **Granulaarsus:** üks päev ühes piirkonnas
-- **Peamised elemendid:** sademete hulk, temperatuur, õhuniiskus, õhurõhk, vihmase/selge päeva tunnus
+- **Peamised elemendid:** sademete hulk, temperatuur, õhurõhk, rõhulanguse lipp
 
 ### fact_patient_day
 - **Granulaarsus:** üks patsient ühel päeval ühes piirkonnas
-- **Peamised elemendid:** patsiendi haigussündmuste arv, valuga seotud haiguse tunnus, ilma tunnus
+- **Peamised elemendid:** patsiendi haigussündmuste arv, vihmasajupäeva lipp
 
 ### fact_patient_weather_region
 - **Granulaarsus:** üks patsiendi haiguse sündmus kindlal kuupäeval kindlas piirkonnas
-- **Peamised elemendid:** patsient, patsiendi haigus, valuga seotud haiguse tunnus, haiguse sündmuse algus- ja lõppkuupäev, vihma tunnus ja haiguse kliiniline korduvuse tunnus
+- **Peamised elemendid:** patsient, patsiendi haigussündmus, haiguse sündmuse algus- ja lõppkuupäev, vihma tunnus ja asukoha tunnus
 
 
 
@@ -189,6 +207,7 @@ erDiagram
     DIM_PATIENT {
         string patient_key PK
         string source_patient_id
+        string state
     }
 
     DIM_REGION {
@@ -236,7 +255,6 @@ erDiagram
         string weather_type_key FK
         decimal precipitation_mm
         decimal temperature_avg_c
-        decimal humidity_avg_pct
         decimal pressure_avg_hpa
         boolean rainy_day_flag
         boolean clear_day_flag
