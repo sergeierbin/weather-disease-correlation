@@ -44,14 +44,15 @@ Andmetorus on kasutusel kolm andmeallikat, nagu näha ka ülaltoodud diagrammil:
 2. Ilmastikuandmed (Meteostat API) Skript fetch_weather.py pärib iga haiguse tekkimise asukoha GPS-koordinaadid raw.organizations tabelist ning laadib vastava ajaperioodi ilmastikuandmed Meteostat teegi kaudu. Kasutatakse päevataseme (daily) mõõtmisi. Kui lähimas jaamas andmed puuduvad, suurendatakse otsinguraadiust (35 → 75 → 150 km).
 3. ICD-10 / SNOMED koodide kaardistus (CSV) Staatiline icd_snomed.csv fail laetakse fetch_icd_codes.py skriptiga tabelisse raw.icd10_codes. See on viitetabel, mis ei muutu.
 
-Kõik kolm sissevõtuskripti on **idempotentsed** — uuesti käivitamine ei tekita duplikaate. Andmete sissevõttu orkestreerib Airflow DAG (etl_pipeline.py). Synthea FHIR JSON-failid ja ICD-10 koodid laetakse paralleelselt, seejärel päritakse Meteostat API kaudu ilmaandmed kõigi asukohafailide koordinaatidele. DAG käivitub käsitsi (manuaalne trigger).
-Airflow DAG laadib kõigepealt andmed toorskeemi (raw), selleks on loodud kolm paralleelset sissevõtuskripti. Seejärel käivitab dbt puhastuskihi (staging) mudelid, mis loevad toorandmete tabelitest ja loovad puhastatud vaated puhastuskihis (staging-skeemis) mudelina. Puhastukihi mudelid on dbt vaated (mitte tabelid) — andmeid ei kopeerita, SQL käivitatakse päringu ajal. Kõigil mudelitel on andmekvaliteedi testid (unikaalsus, not null, FK suhted).
+Projektis on loodud otsast lõpuni andmevoog, mis hõlmab andmete sissevõttu, puhastamist, transformatsiooni, kvaliteedikontrolli ja visualiseerimist. Kasutatakse kolme andmeallikat: Synthea FHIR JSON-faile terviseandmete jaoks, Meteostat API-t ilmaandmete jaoks ning ICD-10/SNOMED kaardistuse CSV-faili. Kõik sissevõtuskriptid on idempotentsed, mis tähendab, et nende korduv käivitamine ei tekita duplikaate.
 
-Olulisemad arvutused:
+Andmevoogu orkestreerib Airflow DAG, mis käivitatakse käsitsi. Esmalt laetakse Synthea andmed ja ICD-10 koodid paralleelselt raw-skeemi, seejärel pärithakse organisatsioonide koordinaatide põhjal Meteostatist ilmaandmed. Pärast seda käivituvad dbt mudelid.
 
-- Surrogaatvõtmed: kõik dimensioonid ja faktid kasutavad MD5-räsi loomulikest võtmetest
-- Ilmastiku geograafiline sidumine: ilmaandmed seotakse patsientidega läbi raw.organizations koordinaatide (lat/lon)
-- Rõhulanguse lipp: arvutatakse staging-kihis — kui rõhk langes eelmisest päevast ≥5 hPa, on pres_drop = TRUE
+dbt staging kiht loeb raw-tabelitest ja loob puhastatud vaated staging-skeemi. Selles kihis andmeid ei kopeerita, vaid need standardiseeritakse ja rikastatakse päringu ajal. Näiteks arvutatakse siin ka rõhulanguse tunnus pres_drop, mis märgitakse tõeks juhul, kui õhurõhk on langenud võrreldes eelmise päevaga vähemalt 5 hPa. Kõigil staging-mudelitel on andmekvaliteedi testid, mis kontrollivad võtmeväljade olemasolu, unikaalsust ja tabelitevahelisi seoseid.
+
+Marts kihis modelleeritakse andmed tähtskeemina, kus on viis dimensioonitabelit ja kolm faktitabelit. Kõik võtmed luuakse MD5-räsi abil loomulikest võtmetest. Ilmastikuandmed seotakse patsiendiandmetega organisatsioonide geograafiliste koordinaatide kaudu, mis võimaldab analüüsida haigussündmusi koos piirkondlike ilmastikutingimustega. Faktitabelid laetakse inkrementaalselt loaded_at välja alusel, et töödelda ainult uusi või muutunud andmeid.
+
+Lõpptulemusena kasutatakse andmeid Supersetis, kus näidikulaud visualiseerib valuga seotud haigussündmusi piirkonniti, ilmastikutüüpide lõikes ja korduvate diagnooside vaates. Lisaks genereeritakse pärast iga dbt käivitust automaatselt ka dbt dokumentatsioon.
 
 ```mermaid
 %% Andmevoo vooskeem
@@ -172,6 +173,7 @@ flowchart LR
 ```
 
 ## Andmebaasi skeemid
+
 
 | Skeem | Tüüp | Kirjeldus |
 |---|---|---|
