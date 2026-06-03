@@ -30,9 +30,9 @@
 
 Küsimus: **"Kuidas erinevad ilmastikutingimused mõjutavad krooniliste ja/või valuga seotud haiguste esinemist erinevates piirkondades?"**
 
-Projekti eesmärk on uurida, kuidas jaotuvad valuga seotud diagnoosid piirkonniti ning kas vihmastel ilmastikutingimustel võib olla seos kroonilise valu või liigesevalu diagnooside sagedasema esinemisega.
-
-Selleks analüüsitakse, kui palju esineb piirkonnas valudiagnoosiga patsiente ning kas vihmastel/madala õhurõhuga päevadel on nende patsientide arv suurem. Lisaks võrreldakse piirkondade lõikes vihmaste päevade osakaalu, et hinnata, kas ilmastikutingimuste ja vaadeldavate diagnooside vahel võib esineda seos.
+Projekti eesmärk on uurida, kuidas jaotuvad valuga seotud diagnoosid piirkonniti ning kas vihmastel ilmastikutingimustel võib olla seos kroonilise valu või liigesevalu diagnooside sagedasema esinemisega. Selleks analüüsitakse, kui palju esineb piirkonnas valudiagnoosiga patsiente ning kas vihmastel/madala õhurõhuga päevadel on nende patsientide arv suurem. Lisaks võrreldakse piirkondade lõikes vihmaste päevade osakaalu, et hinnata, kas ilmastikutingimuste ja vaadeldavate diagnooside vahel võib esineda seos.
+Projektitöös püstitatud hüpotees, kas ilmastikutingimused mõjutavad haigussündmuste esinemist, eriti valuga seotud haigussündmuste esinemist. Projektitöö hüpoteesi tõestamiseks/ümber lükkamiseks oli vajalik käsitleda tundlikke terviseandmeid, mistõttu polnud võimalik päriseluliste toorandmete pealt projektitööd üles ehitada. Seetõttu sai valitud sünteetilised terviseandmed. 
+Kasutusele võeti Synthea, mis genereerib sünteetilised terviseandmed, USA populatsioonil, HL7 FHIR R4 formaadis, ressurssidena. Projektitiimile oli oluline läbi mängida FHIR ressursside käsitlus andmetorus ning JSON parsimine, kuna TEHIK on ülemineku faasis, HL7 CDA andmevahetusstandardilt HL7 FHIR andmevahetusstandardile, mis toob kaasa nii põhimõttelise muudatuse andmete salvestamises kui ka tehnilise keerukuse XMLide vs JSON parsimise osas. 
 
 **Mõõdikud**
 1. Valuga seotud haigussündmuste arv Massachusettsi ja California piirkondades
@@ -69,7 +69,14 @@ Arhitektuuri dokumentatsioon on koostatud mermaid diagrammi kasutades.
 Kujutatud on andmevoogu, kuidas andmete sissevõtt toimub ning kuidas transformatsioonidega on jõutud ärikihini. 
 Projekti andmed oleme üles ehitanud täheskeemi põhimõttel, kus konteksti oleme toonud dimensiooni tabelitesse ja faktid faktitabelitesse. 
 
-Projekti arhitektuur kujuneb [siin](docs/arhitektuur.md)  
+Projekti arhitektuur kujuneb [siin](docs/arhitektuur.md). 
+Arhitektuuri kujundamisel lähtumise äriküsimusest ehk püstitatud hüpoteesist, sünteetiliste terviseandmete sisust ning käitumisest. Arhitektuur oli pidevas muutumises läbi sprintide, mistõttu võis tekkida andmetorus ja transformatsioonides pidevaid kohendusvajadusi.
+Andmeallikate diagramm kujutab algallikaid ning nendest tulenevaid toorandmeid. Sünteetiliste terviseandmete puhul on välja toodud ressursid, mille kaudu sobiv andmestik kokku tuua. HL7 FHIR ressursid võimaldavad andmeid vahetada väikeste andmekogumite kaudu, sõltumata tervishoiutöötaja kinnitusest või uuringute tulemitest ehk lihtsamalt sündmuspõhiselt. Ilmastikuandmed tulevad METEOSTAT teegi kaudu ning lisandina on oluline välja tuua SNOMED CT terminoloogia koodide vastendus ICD-10 koodide vastu, mis annavad haigussündmusele rahvusvahelise koodi nime. 
+Andmevoo diagramm visualiseerib toorandmete, puhastuskihi ja ärikihi kujunemist. Lisaks andmekvaliteedi testide nimetusi, ja näidikulaudade nimetusi. Omavahelisi seosid ja transformatsioone. Lihtsakujulisem kujutis andmetorust. 
+ERdiagramm kujutab endast täheskeemi realisatsiooni ärikihis, kus on väljatoodud, vastavalt äriküsimusele, püstitatud dimensiooni ja faktitabelid. Faktitabelite granulaarsus on spetsifitseeritud nii, et oleks võimalikult täpne ning võimaldaks äriküsimusele vastata. Dimensioonitabelid loovad konteksti, kus patsiendid, organisatsiooonid regiooniti kokku toodud, lisaks haigussündmused ning ilmastikutüübid. Erinevate tabelite omavahelisi seoseid ja sõltuvusi. 
+ER-diagrammi alusel loodud tabelid on maha salvestatud POSTGRE SQL baasi, vahepealne puhastuskiht on dbt vaatena ainult. 
+
+Andmete sissevõtt on idemopotentne ning andmetoru on ülesehitatud valitud tehnoloogilisele stackile, et äriküsimusele vastata võimalikult täpselt.
 
 ### Andmeallikad
 1. Ilmastikuandmete API — [Meteostat](https://meteostat.net)
@@ -198,6 +205,17 @@ Projekt kontrollib järgmist:
 Testide tulemused: 51 testi, PASS=50 WARN=1 (tmin > tmax ehk Meteostat andmeviga 15 real. Ei mõjuta analüüsi)
 
 ### Näidikulaud
+Näidikulauad on koostatatud vastavalt äriküsimuse (hüpoteesi) tõestamisele või ümberlükkamisele. 
+
+**Esimene mõõdik: Valuga seotud haigussündmuste arv piirkonniti** 
+![alt text](docs/valuga-seotud-haiguste-esinemissagedus-1000-patsiendi-kohta-2026-05-30T10-50-28.928Z.jpg)
+
+Joonis visualiseerib Massachusettsi ja California piirkonnas pöördunud patsientide arvu, kellel diagnoositi haigussündmuseks exceli mäpingu tabeli alusel mõni haigus. 
+
+**Teine mõõdik: Valuga seotud haigussündmustega patsientide arv kindlas ilmastikutüübis**
+![alt text](docs/valuga-seotud-haigustega-patsientide-osakaal-ilmastikutuubi-jargi-2026-05-30T10-58-09.375Z.jpg)
+
+Joonis illustreerib ilusti ilmastikutüüpide kaudu patsientide arvu, kellel on haigussündmuseks samal kuupäeval, mäping tabelis välja toodud haigus.
 
 ### Projekti struktuur
 ```
@@ -281,17 +299,12 @@ weather-disease-correlation/
 ### Kokkuvõte, puudused ja võimalikud edasiarendused 
 
 **Kokkuvõte:**
-- Synthea genereerib sünteetilised terviseandmed FHIR R4 formaadis
-- Kolm sissevõtuskripti töötavad: Synthea FHIR JSON parsimine, Meteostat ilmaandmete pärimine ja ICD-10/SNOMED CSV laadimine — kõik idempotentsed
-- Airflow DAG orkestreerib kogu andmevoo (sissevõtt → ilm → dbt) õiges järjekorras
-- dbt staging kiht (6 mudelit) puhastab ja standardiseerib kõik toored andmed
-- dbt marts kiht: 5 dimensioonitabelit + 3 faktitabelit tähtskeemina
-- Inkrementaalne laadimine faktitabelites (`loaded_at`-põhine filter)
-- Ilmastikuandmete geograafiline sidumine patsiendiandmetega lat/lon kaudu
-- Rõhulanguse (`pres_drop`) ja ilmatüübi (`dim_weather_type`) klassifikatsioon
-- Andmekvaliteedi testid: kokku 51 testi
-- dbt docs genereeritakse automaatselt pärast iga käivitust
-- Superset näidikulaud visualiseerib tulemusi
+- Sünteetiliste terviseandmete generaatori töötamine oli teadmata, mistõttu lisas see keerukust andmetoru ülesehitusele.
+- Püstitatud hüpotees ei saanud tegelikkuses vastust, sest sünteetilised terviseandmed ei kasutanud erinevaid staatuseid oma ressurssides. Jäime lootma dokumenteerimise variatiivsusele, kuid synthea oli lihtsustanud oluliselt tervisenandmete kirjeldamist. 
+- Andmetoru on ülesehitatud terviklikult tehnoloogilisele stackile ning koodi ise ei kirjutatud, vaid CLAUDE aitas. 
+- 
+- 
+- 
 
 **Puudused:**
 - **Sünteetilised andmed**: Synthea ei modelleeri ilma ja tervise vahelist seost, seega korrelatsioon pole tuvastatav ilma pärisandmeteta.
