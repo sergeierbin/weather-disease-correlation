@@ -3,25 +3,36 @@
 ##### Analysis correlation between weather conditions and diagnoses
 
 ### Sisukord
-- [Äriküsimus](#äriküsimus)
-- [Riskid](#riskid)
-- [Arhitektuur](#arhitektuur)
-- [Andmeallikad](#andmeallikad)
-- [Andmestik](#andmestik)
-- [Stack](#stack)
-- [Käivitamine](#käivitamine)
-- [Saladused ja konfiguratsioon](#saladused-ja-konfiguratsioon)
-- [Andmevoog lühidalt](#andmevoog-lühidalt)
-- [Andmekvaliteedi testid](#andmekvaliteedi-testid)
-- [Projekti struktuur](#projekti-struktuur)
-- [Kokkuvõte, puudused ja võimalikud edasiarendused](#kokkuvõte-puudused-ja-võimalikud-edasiarendused)
-- [Meeskond](#meeskond)
+- [TEHIK - Ilmastiku mõju haiguste esinemisele](#tehik---ilmastiku-mõju-haiguste-esinemisele)
+        - [Analysis correlation between weather conditions and diagnoses](#analysis-correlation-between-weather-conditions-and-diagnoses)
+    - [Sisukord](#sisukord)
+    - [Äriküsimus](#äriküsimus)
+    - [Riskid](#riskid)
+    - [Arhitektuur](#arhitektuur)
+    - [Andmeallikad](#andmeallikad)
+    - [Andmestik](#andmestik)
+    - [Stack](#stack)
+    - [Käivitamine](#käivitamine)
+      - [Eeltingimused](#eeltingimused)
+      - [1. Klooni ja seadista](#1-klooni-ja-seadista)
+      - [2. Genereeri Synthea patsiendid](#2-genereeri-synthea-patsiendid)
+      - [3. Ehita ja käivita kogu stack](#3-ehita-ja-käivita-kogu-stack)
+      - [4. Käivita ETL pipeline](#4-käivita-etl-pipeline)
+      - [Kasulikud käsud](#kasulikud-käsud)
+    - [Saladused ja konfiguratsioon](#saladused-ja-konfiguratsioon)
+    - [Andmekvaliteedi testid](#andmekvaliteedi-testid)
+    - [Näidikulaud](#näidikulaud)
+    - [Projekti struktuur](#projekti-struktuur)
+    - [Kokkuvõte, puudused ja võimalikud edasiarendused](#kokkuvõte-puudused-ja-võimalikud-edasiarendused)
+    - [Meeskond](#meeskond)
 
 ### Äriküsimus
 
 Küsimus: **"Kuidas erinevad ilmastikutingimused mõjutavad krooniliste ja/või valuga seotud haiguste esinemist erinevates piirkondades?"**
 
-Projekti eesmärk on uurida, kuidas jaotuvad valuga seotud diagnoosid piirkonniti ning kas vihmastel ilmastikutingimustel võib olla seos kroonilise valu või liigesevalu diagnooside sagedasema esinemisega. Selleks analüüsitakse, kui palju esineb piirkonnas valudiagnoosiga patsiente ning kas vihmastel/madala õhurõhuga päevadel on nende patsientide arv suurem. Lisaks võrreldakse piirkondade lõikes vihmaste päevade osakaalu, et hinnata, kas ilmastikutingimuste ja vaadeldavate diagnooside vahel võib esineda seos.
+Projekti eesmärk on uurida, kuidas jaotuvad valuga seotud diagnoosid piirkonniti ning kas vihmastel ilmastikutingimustel võib olla seos kroonilise valu või liigesevalu diagnooside sagedasema esinemisega.
+
+Selleks analüüsitakse, kui palju esineb piirkonnas valudiagnoosiga patsiente ning kas vihmastel/madala õhurõhuga päevadel on nende patsientide arv suurem. Lisaks võrreldakse piirkondade lõikes vihmaste päevade osakaalu, et hinnata, kas ilmastikutingimuste ja vaadeldavate diagnooside vahel võib esineda seos.
 
 **Mõõdikud**
 1. Valuga seotud haigussündmuste arv Massachusettsi ja California piirkondades
@@ -178,10 +189,13 @@ Vajalikud muutujad:
 ### Andmekvaliteedi testid
 Projekt kontrollib järgmist:
 
-[Test 1 - ]
-[Test 2 - ]
-[Test 3 - ]
-Testide tulemused: []
+- Primaarvõtmete unikaalsus ja mitte-null (staging ja marts mudelid)
+- Viitelised seosed (FK) kihtide vahel (encounters→patients, conditions→patients, conditions→encounters)
+- Ilmamõõtmiste füüsikalised piirid (sademed ei saa olla negatiivsed, temperatuur peab jääma realistlikku vahemikku -30..50°C)
+- Diagnoosi kuupäevade loogika (lõppkuupäev ei saa olla varasem kui alguskuupäev)
+- Koordinaatide olemasolu (lat/lon not null — vajalik ilmaandmete laadimiseks)
+
+Testide tulemused: 51 testi, PASS=50 WARN=1 (tmin > tmax ehk Meteostat andmeviga 15 real. Ei mõjuta analüüsi)
 
 ### Näidikulaud
 
@@ -275,22 +289,23 @@ weather-disease-correlation/
 - Inkrementaalne laadimine faktitabelites (`loaded_at`-põhine filter)
 - Ilmastikuandmete geograafiline sidumine patsiendiandmetega lat/lon kaudu
 - Rõhulanguse (`pres_drop`) ja ilmatüübi (`dim_weather_type`) klassifikatsioon
-- Andmekvaliteedi testid: ...
+- Andmekvaliteedi testid: kokku 51 testi
 - dbt docs genereeritakse automaatselt pärast iga käivitust
 - Superset näidikulaud visualiseerib tulemusi
 
 **Puudused:**
+- **Sünteetilised andmed**: Synthea ei modelleeri ilma ja tervise vahelist seost, seega korrelatsioon pole tuvastatav ilma pärisandmeteta.
 - Kolmas mõõdik (Korduvate valuga seotud diagnooside osakaal (%) kombinatsioonis ilmastikutüübi ja rõhulangusega piirkonna lõikes) ei ole sünteetiliste andmetega planeeritud viisil teostatav, kuna selgus, et Syntheas ei ole kasutusel vastavaid staatuse väärtuseid (korduvate diagnooside kliinilised staatused "recurrence" ja "relapse"). Mõõdik ei ole sisuliselt vale, pärisandmetega peaks toimima (eeldusel et tervishoiutöötaja on korduvad diagnoosid korrektselt dokumenteerinud).
-[Loetle ausalt, mis jäi tegemata - see ei mõjuta hinnet negatiivselt, vaid aitab hinnata]
 
 **Mis edasi:**
-- [Mida tahaksid edasi teha, kui aega oleks rohkem]
 - **Synthea genereeritud JSON-failide parsimise optimeerimine ja inkrementaalse laadimise ajastamine**
   - Kaaluda stsenaariumid:
    1. **Tingimuslik parsimine** — genereerida uusi JSON-faile Synthea abil vastavalt vajadusele ning enne parsimist kontrollida, kas fail on uuendatud; parsida ainult muutunud failid. See võiks tõsta parsimise kiirust oluliselt.
    2. **Tulevikusündmustega failid** — genereerida Synthea JSON-failid ka tuleviku sündmustega ning parsida igapäevaselt ainult tänaseks toimunud sündmusi. See võimaldaks ajastada igapäevast inkrementaalset laadimist. Reaalses elus ei ole see siiski praktiline, kuna sündmused ei ole ette teada. Praktikas on tavaliselt saadaval API, kust saab pärida ainult uusi sündmusi — sellisel juhul ei ole parsimine niivõrd mahukas. Sel juhul ei saa rakendada eelmises punktis mainitud tingimusliku parsimist, kuna failid ei uueneks.
   3. **Paralleelne parsimine** — suurendada korraga parsitavate failide arvu ja katsetada paralleelseid protsesse. Selle mõju oleks tõenäoliselt minimaalne.
 - **Praeguse marts-kihi muutmine intermediate-kihiks ja Superseti virtuaalsete dataset'ide kihi muutmine marts-kihiks.**
+- **Kontrollgrupi lisamine** — laadida kõik Synthea diagnoosid, mitte ainult valuga seotud diagnoosid, et võimaldada valuga ja muude diagnoosidega patsientide võrdlust ilmastikutingimuste lõikes.
+
 
 ### Meeskond
 
