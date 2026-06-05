@@ -203,15 +203,9 @@ Testide tulemused: 51 testi, PASS=50 WARN=1 (tmin > tmax ehk Meteostat andmeviga
 ### Näidikulaud
 Näidikulauad on koostatatud vastavalt äriküsimuse (hüpoteesi) tõestamisele või ümberlükkamisele. 
 
-**Esimene mõõdik: Valuga seotud haigussündmuste arv piirkonniti** 
-![alt text](docs/valuga-seotud-haiguste-esinemissagedus-1000-patsiendi-kohta-2026-05-30T10-50-28.928Z.jpg)
+![alt text](docs/valudiagnoosidega-patsientide-analuus-2026-06-02T15-50-41.791Z.jpg)
 
-Joonis visualiseerib Massachusettsi ja California piirkonnas pöördunud patsientide arvu, kellel diagnoositi haigussündmuseks mäpingu tabeli alusel mõni haigus. 
-
-**Teine mõõdik: Valuga seotud haigussündmustega patsientide arv kindlas ilmastikutüübis**
-![alt text](docs/valuga-seotud-haigustega-patsientide-osakaal-ilmastikutuubi-jargi-2026-05-30T10-58-09.375Z.jpg)
-
-Joonis illustreerib ilusti ilmastikutüüpide kaudu patsientide arvu, kellel on haigussündmuseks samal kuupäeval, mäping tabelis välja toodud haigus.
+Joonis kujutab endast näidikulauda äriküsimuse hüpoteesi vastamisele, kuidas haigussündmused on mõjutatud ilmastikutingimustest.
 
 ### Projekti struktuur
 ```
