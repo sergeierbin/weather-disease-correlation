@@ -227,7 +227,7 @@ weather-disease-correlation/
 │
 ├── docker/
 │   └── airflow/
-│       └── Dockerfile          # Kohandatud Airflow image (dbt + meteostat sisse küpsetatud)
+│       └── Dockerfile          # Kohandatud Airflow image
 │
 ├── postgres/
 │   └── init.sql                # Loob skeemid, tabelid ja indeksid
@@ -304,7 +304,7 @@ Püstitatud hüpotees jäi vastuseta. Selgus ka, et Synthea lihtsustab tervisean
 
 Tegemist on sünteetiliste andmetega — Synthea genereerib patsiente statistiliste mudelite põhjal, ilmastik ei mõjuta diagnoose. Seega ükskõik milline tulemus oleks olnud juhuslik, mitte reaalne seos.
 
-Järeldus: Andmetorustik ja analüütikaraamistik töötavad korrektselt — pipeline laadib, transformeerib ja visualiseerib andmeid õigesti. Hüpoteesi testimiseks on vaja pärisandmeid ning kontrollgruppi.
+Järeldus: Andmetorustik ja analüütikaraamistik töötavad korrektselt — pipeline laeb, transformeerib ja visualiseerib andmeid õigesti. Hüpoteesi testimiseks on vaja pärisandmeid ning kontrollgruppi.
 
 **Puudused:**
 - **Sünteetilised andmed**: Synthea ei modelleeri ilma ja tervise vahelist seost, seega korrelatsioon pole tuvastatav ilma pärisandmeteta.
